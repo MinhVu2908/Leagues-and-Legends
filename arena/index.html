@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Bouncing Balls</title>
+  <link rel="stylesheet" href="./src/css/styles.css">
+</head>
+<body>
+  <div id="container">
+    <div id="hp-container">
+      <div class="hp-wrapper" id="hpA">
+        <div class="hp-label">Ball A</div>
+        <div class="hp-bar"><div class="hp-fill" id="hpA-fill" style="width:100%"></div></div>
+        <div class="hp-text" id="hpA-text">100 / 100</div>
+      </div>
+      <div id="countdown" class="countdown"></div>
+      <div class="hp-wrapper" id="hpB">
+        <div class="hp-label">Ball B</div>
+        <div class="hp-bar"><div class="hp-fill" id="hpB-fill" style="width:100%"></div></div>
+        <div class="hp-text" id="hpB-text">100 / 100</div>
+      </div>
+    </div>
+    <canvas id="c" width="500" height="500"></canvas>
+    <button id="reset">Reset Scene</button>
+  </div>
+
+  <script type="module" src="./src/js/main.js"></script>
+</body>
+</html>
