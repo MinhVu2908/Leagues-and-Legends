@@ -14,7 +14,7 @@ export class HoshimiMiyabi extends Ball {
     this.slashDuration = 1200; // duration of slashing phase
     this.sheatDuration = 800; // duration of sheating phase
     this.attackTarget = null;
-    this.damagePerCut = 40; // 5 cuts × 24 = 120 total damage
+    this.damagePerCut = 70; // 5 cuts × 24 = 120 total damage
     this.cutsDealt = 0; // track how many cuts have been dealt
     this.maxCuts = 5; // number of cuts in the attack
     this.startX = x;
