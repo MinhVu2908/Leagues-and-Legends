@@ -8,6 +8,7 @@ import { StunBall } from './stunBall.js';
 import { FeatherBall } from './featherBall.js';
 import { MineBall } from './mineBall.js';
 import { RageBall } from './rageBall.js';
+import { TeleBall } from './teleBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new RageBall(a.x, a.y, '#90caf9', {});
+      const ballA = new TeleBall(a.x, a.y, '#90caf9', {});
       const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*10); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall
+      const t = Math.floor(Math.random()*11); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t === 7) return new FeatherBall(x,y,color, { });
       if(t === 8) return new MineBall(x,y,color, { });
       if(t === 9) return new RageBall(x,y,color, { });
+      if(t === 10) return new TeleBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -154,6 +156,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
   function resolve(){
     const A = balls[0], B = balls[1]; const d = dist(A.x,A.y,B.x,B.y);
+    const bounds = { W, H };
     const touching = d <= A.r + B.r;
     if(touching){
       const nx=(B.x-A.x)/d, ny=(B.y-A.y)/d; const overlap = A.r + B.r - d;
@@ -189,6 +192,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // apply damage through centralized helper (handles one-time vulnerability multiplier)
           applyDamageTo(A, rawBDamage, bCrit, false);
           applyDamageTo(B, rawADamage, aCrit, false);
+          // TeleBall attempt teleport when taking damage (very low chance to escape + restore HP)
+          if(typeof A.attemptTeleport === 'function' && rawBDamage > 0){ A.attemptTeleport({ W, H }, rawBDamage); }
+          if(typeof B.attemptTeleport === 'function' && rawADamage > 0){ B.attemptTeleport({ W, H }, rawADamage); }
 
           // show crit visual on attacker(s)
           if(aCrit && !aIsStunned){ A.lastCrit = 700; }
