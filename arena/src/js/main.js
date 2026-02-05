@@ -48,13 +48,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = true;
+    const TEMP_SPAWN = false;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new StunBall(a.x, a.y, '#90caf9', {});
-      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new SmallBall(a.x, a.y, '#90caf9', {});
+      const ballB = new SmallBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -148,8 +148,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
           
           const bCrit = Math.random() < (B.critChance || 0);
           const aCrit = Math.random() < (A.critChance || 0);
-          const bDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
-          const aDamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
+          let bDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
+          let aDamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
+          
+          // StunBall bonus damage: deal 1.5x damage to stunned enemy, but only once per stun
+          if(B.typeName === 'Stun Ball' && aIsStunned && !A.stunHitByStunBall){
+            bDamage = Math.round(bDamage * 1.5);
+            A.stunHitByStunBall = true; // mark that this stunned target was already hit by StunBall
+          }
+          if(A.typeName === 'Stun Ball' && bIsStunned && !B.stunHitByStunBall){
+            aDamage = Math.round(aDamage * 1.5);
+            B.stunHitByStunBall = true; // mark that this stunned target was already hit by StunBall
+          }
+          
           A.hp -= bDamage; B.hp -= aDamage;
           // spawn damage popups showing damage taken (mark crits)
           if(bDamage > 0) spawnDamage(A.x, A.y - A.r - 6, bDamage, bCrit);
@@ -191,7 +202,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
         orb.alive = false;
         // respawn orb after random delay
-        setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
+        setTimeout(()=>{ spawnOrb(); }, 1000 + Math.random()*4000);
         break;
       }
     }

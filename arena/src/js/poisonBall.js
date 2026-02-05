@@ -4,7 +4,7 @@ export class PoisonBall extends Ball {
   // PoisonBall applies a damage-over-time effect on hit
   // options: { r, speed, hp, damage, poisonDmg, poisonDuration, poisonInterval }
   constructor(x, y, color, options = {}){
-    const defaults = { r: 36, speed: 10, hp: 1000, damage: 40, critChance: 0.08, poisonDmg: 30, poisonDuration: 5000, poisonInterval: 600 };
+    const defaults = { r: 36, speed: 10, hp: 1500, damage: 40, critChance: 0.08, poisonDmg: 30, poisonDuration: 5000, poisonInterval: 600 };
     super(x, y, color, Object.assign({}, defaults, options));
     this.poisonDmg = options.poisonDmg ?? defaults.poisonDmg;
     this.poisonDuration = options.poisonDuration ?? defaults.poisonDuration;

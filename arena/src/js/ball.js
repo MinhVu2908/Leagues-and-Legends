@@ -20,6 +20,11 @@ export class Ball {
     const now = Date.now();
     const isStunned = this.stunExpireAt && this.stunExpireAt > now;
     
+    // if stun expired, reset the bonus damage flag
+    if(this.stunExpireAt && this.stunExpireAt <= now){
+      this.stunHitByStunBall = false;
+    }
+    
     // apply single active slow multiplicatively to movement (no stacking)
     let mult = 1;
     if(this.slow){
