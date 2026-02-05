@@ -141,17 +141,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
       // apply damage once when collision begins
       if(!previouslyColliding){
         if(A.alive && B.alive){
+          // check if either ball is stunned (stunned balls deal no damage)
+          const now = Date.now();
+          const aIsStunned = A.stunExpireAt && A.stunExpireAt > now;
+          const bIsStunned = B.stunExpireAt && B.stunExpireAt > now;
+          
           const bCrit = Math.random() < (B.critChance || 0);
           const aCrit = Math.random() < (A.critChance || 0);
-          const bDamage = Math.round(B.damage * (bCrit ? 2 : 1));
-          const aDamage = Math.round(A.damage * (aCrit ? 2 : 1));
+          const bDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
+          const aDamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
           A.hp -= bDamage; B.hp -= aDamage;
           // spawn damage popups showing damage taken (mark crits)
-          spawnDamage(A.x, A.y - A.r - 6, bDamage, bCrit);
-          spawnDamage(B.x, B.y - B.r - 6, aDamage, aCrit);
+          if(bDamage > 0) spawnDamage(A.x, A.y - A.r - 6, bDamage, bCrit);
+          if(aDamage > 0) spawnDamage(B.x, B.y - B.r - 6, aDamage, aCrit);
           // show crit visual on attacker(s)
-          if(aCrit){ A.lastCrit = 700; }
-          if(bCrit){ B.lastCrit = 700; }
+          if(aCrit && !aIsStunned){ A.lastCrit = 700; }
+          if(bCrit && !bIsStunned){ B.lastCrit = 700; }
           // apply poison effects (if the attacker type implements it)
           if(typeof B.applyPoison === 'function'){ B.applyPoison(A, spawnDamage); }
           if(typeof A.applyPoison === 'function'){ A.applyPoison(B, spawnDamage); }
