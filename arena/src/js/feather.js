@@ -6,7 +6,7 @@ export class Feather {
     this.vy = vy;
     this.owner = owner;
     this.r = 4;
-    this.damage = 25; // feather damage on hit
+    this.damage = 40; // feather damage on hit
     this.alive = true;
     this.retracting = false;
     this.retractSpeed = 12;

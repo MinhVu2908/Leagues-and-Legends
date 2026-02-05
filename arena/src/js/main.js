@@ -6,6 +6,7 @@ import { SpikerBall } from './spikerBall.js';
 import { IceBall } from './iceBall.js';
 import { StunBall } from './stunBall.js';
 import { FeatherBall } from './featherBall.js';
+import { MineBall } from './mineBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -79,8 +80,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new BigBall(a.x, a.y, '#90caf9', {});
-      const ballB = new FeatherBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new FeatherBall(a.x, a.y, '#90caf9', {});
+      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -91,7 +92,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*8); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall
+      const t = Math.floor(Math.random()*9); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t === 5) return new IceBall(x,y,color, { });
       if(t === 6) return new StunBall(x,y,color, { });
       if(t === 7) return new FeatherBall(x,y,color, { });
+      if(t === 8) return new MineBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -111,6 +113,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   let spikes = [];
   // global feather projectiles
   let feathers = [];
+  // global mine projectiles
+  let mines = [];
 
   let previouslyColliding = false;
   // healing orb management
@@ -236,6 +240,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     for(const b of balls){ if(b.pendingSpikes && b.pendingSpikes.length){ for(const s of b.pendingSpikes){ spikes.push(s); } b.pendingSpikes.length = 0; } }
     // collect feathers spawned by any ball (FeatherBall sets pendingFeathers)
     for(const b of balls){ if(b.pendingFeathers && b.pendingFeathers.length){ for(const f of b.pendingFeathers){ feathers.push(f); } b.pendingFeathers.length = 0; } }
+    // collect mines spawned by any ball (MineBall sets pendingMines)
+    for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
     resolve();
     for(const b of balls){ b.draw(ctx); }
 
@@ -258,6 +264,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
       }
     }
     for(const f of feathers){ f.draw(ctx); }
+
+    // update + draw mines
+    for(let i = mines.length-1; i >= 0; --i){ const m = mines[i]; m.update({ W, H }, nowDt); if(!m.alive){ mines.splice(i,1); continue; }
+      // check collision with balls (don't hit owner)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === m.owner) continue; const d = dist(bb.x,bb.y,m.x,m.y); if(d <= bb.r + m.r){ // hit
+        applyDamageTo(bb, m.damage, false, false);
+        m.alive = false; break; }
+      }
+    }
+    for(const m of mines){ m.draw(ctx); }
 
     // draw orb (if present)
     if(orb && orb.alive){ orb.update(nowDt); orb.draw(ctx); }
