@@ -49,9 +49,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function spawnDamage(x,y,amount,isCrit=false,isPoison=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit,isPoison)); }
 
 
-// Relative to index.html: Enter src -> enter sound
-const hitAudio = new Audio('src/sound/hit.mp3');
-const critAudio = new Audio('src/sound/critHit.mp3');
+
+const hitAudio = new Audio('/sound/hit.mp3');
+const critAudio = new Audio('/sound/critHit.mp3');
   hitAudio.volume = 0.46;
   critAudio.volume = 0.46;
 
