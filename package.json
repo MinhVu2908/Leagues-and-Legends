@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vite --root arena",
-    "build": "vite build --root arena --outDir dist",
-    "preview": "vite preview --root arena --port 5173"
+    "dev": "cd arena && vite",
+    "build": "cd arena && vite build --outDir dist",
+    "preview": "cd arena && vite preview --port 5173"
   },
   "devDependencies": {
     "vite": "^5.0.0"
