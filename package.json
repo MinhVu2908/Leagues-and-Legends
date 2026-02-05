@@ -3,11 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cd arena && vite",
-    "build": "cd arena && vite build --outDir dist",
-    "preview": "cd arena && vite preview --port 5173",
-    "test-server": "node server/test-server.js"
-  },
+  "build": "vite build",
+  "dev": "vite"
+},
   "devDependencies": {
     "vite": "^5.0.0"
   }
