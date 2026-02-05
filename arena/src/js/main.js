@@ -6,6 +6,7 @@ import { SpikerBall } from './spikerBall.js';
 import { IceBall } from './iceBall.js';
 import { StunBall } from './stunBall.js';
 import { HealingOrb } from './healingOrb.js';
+import { DirectionOrb } from './directionOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const canvas = document.getElementById('c');
@@ -73,7 +74,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = true;
+    const TEMP_SPAWN = false;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
@@ -109,13 +110,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
   let spikes = [];
 
   let previouslyColliding = false;
-  // healing orb management
+  // orb management (HealingOrb or DirectionOrb)
   let orb = null;
   function spawnOrb(){
     const padding = 24;
     const x = padding + Math.random()*(W-2*padding);
     const y = padding + Math.random()*(H-2*padding);
-    orb = new HealingOrb(x,y, 300, 14);
+    // alternate between HealingOrb and DirectionOrb
+    const orbType = Math.random() < 0.5 ? 'heal' : 'direction';
+    if(orbType === 'heal'){
+      orb = new HealingOrb(x,y, 300, 14);
+    } else {
+      orb = new DirectionOrb(x,y, 14);
+    }
+    orb.type = orbType;
   }
   spawnOrb();
 
@@ -213,8 +221,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(!b.alive) continue;
       const d = dist(b.x,b.y,orb.x,orb.y);
       if(d <= b.r + orb.r){
-        const heal = Math.min(orb.healAmount, b.maxHp - b.hp);
-        if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
+        // handle orb type
+        if(orb.type === 'heal'){
+          const heal = Math.min(orb.healAmount, b.maxHp - b.hp);
+          if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
+        } else if(orb.type === 'direction'){
+          // randomize direction (preserve speed)
+          const speed = Math.hypot(b.vx, b.vy);
+          const angle = Math.random() * Math.PI * 2;
+          b.vx = Math.cos(angle) * speed;
+          b.vy = Math.sin(angle) * speed;
+        }
         orb.alive = false;
         // respawn orb after random delay
         setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
