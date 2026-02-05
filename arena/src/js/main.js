@@ -4,6 +4,7 @@ import { BigBall } from './bigBall.js';
 import { PoisonBall } from './poisonBall.js';
 import { SpikerBall } from './spikerBall.js';
 import { IceBall } from './iceBall.js';
+import { StunBall } from './stunBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -46,6 +47,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // new Ball(x,y,color, { r, speed, hp, damage })
 
   function spawnTwo(){
+    // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
+    const TEMP_SPAWN = true;
+    if(TEMP_SPAWN){
+      const a = {x: R + 60, y: H/2};
+      const b = {x: W - R - 60, y: H/2};
+      // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
+      const ballA = new StunBall(a.x, a.y, '#90caf9', {});
+      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      return [ballA, ballB];
+    }
+
     const a = {x: R + Math.random()*(W-2*R), y: R + Math.random()*(H-2*R)};
     let b; let tries=0;
     do{ b = {x: R + Math.random()*(W-2*R), y: R + Math.random()*(H-2*R)}; tries++; } while(dist(a.x,a.y,b.x,b.y) < 2*R + 8 && tries<200);
@@ -53,12 +65,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*6); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall
+      const t = Math.floor(Math.random()*7); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
       if(t === 4) return new SpikerBall(x,y,color, { });
       if(t === 5) return new IceBall(x,y,color, { });
+      if(t === 6) return new StunBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -145,6 +158,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // apply slow effects (if the attacker type implements it)
           if(typeof B.applySlow === 'function'){ B.applySlow(A); }
           if(typeof A.applySlow === 'function'){ A.applySlow(B); }
+          // apply stun effects (if the attacker type implements it)
+          if(typeof B.applyStun === 'function'){ B.applyStun(A); }
+          if(typeof A.applyStun === 'function'){ A.applyStun(B); }
 
           // slightly randomize directions to avoid sticking/circling while preserving speed
           if(typeof A.randomize === 'function') A.randomize();
