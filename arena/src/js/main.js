@@ -49,8 +49,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function spawnDamage(x,y,amount,isCrit=false,isPoison=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit,isPoison)); }
 
   // audio (quiet for now)
-  const hitAudio = new Audio('../arena/src/sound/hit.mp3');
-  const critAudio = new Audio('../arena/src/sound/critHit.mp3');
+  const hitAudio = new Audio('./sound/hit.mp3');
+  const critAudio = new Audio('./sound/critHit.mp3');
   hitAudio.volume = 0.46;
   critAudio.volume = 0.46;
 

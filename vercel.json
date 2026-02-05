@@ -1,3 +1,6 @@
 {
-  "outputDirectory": "arena/dist"
+  "public": true,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/src/$1" }
+  ]
 }
