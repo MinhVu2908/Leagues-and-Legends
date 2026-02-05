@@ -10,6 +10,7 @@ export class Ball {
     this.maxHp = hp; this.hp = hp; this.damage = damage; this.alive = true;
     this.critChance = critChance;
     this.lastCrit = 0; // ms remaining for crit visual
+    this.typeName = options.typeName || 'Normal Ball';
   }
 
   update(bounds, dt = 16){
@@ -35,5 +36,18 @@ export class Ball {
     ctx.beginPath(); ctx.fillStyle=this.alive ? this.color : 'rgba(120,120,120,0.45)'; ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.stroke();
     ctx.restore();
+    // draw type name above the ball
+    if(this.typeName){
+      ctx.save();
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillStyle = '#fff';
+      const y = this.y - this.r - 8;
+      ctx.strokeText(this.typeName, this.x, y);
+      ctx.fillText(this.typeName, this.x, y);
+      ctx.restore();
+    }
   }
 }

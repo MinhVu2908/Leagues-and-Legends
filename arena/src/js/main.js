@@ -1,6 +1,7 @@
 import { Ball } from './ball.js';
 import { SmallBall } from './smallBall.js';
 import { BigBall } from './bigBall.js';
+import { PoisonBall } from './poisonBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -22,9 +23,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // Damage popup system
   class DamagePopup{
-    constructor(x,y,amount,isCrit=false){ this.x = x; this.y = y; this.amount = amount; this.isCrit = !!isCrit; this.life = 800; this.age = 0; this.vy = -0.03 - Math.random()*0.05; this.alpha = 1; }
+    constructor(x,y,amount,isCrit=false,isPoison=false){ this.x = x; this.y = y; this.amount = amount; this.isCrit = !!isCrit; this.isPoison = !!isPoison; this.life = 800; this.age = 0; this.vy = -0.03 - Math.random()*0.05; this.alpha = 1; }
     update(dt){ this.age += dt; this.y += this.vy * dt; this.alpha = 1 - (this.age / this.life); }
-    draw(ctx){ ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha); const isHeal = this.amount < 0; const color = this.isCrit ? '#ffd54f' : (isHeal ? '#b9f6ca' : '#fff'); ctx.fillStyle = color; ctx.font = this.isCrit ? '24px system-ui' : '20px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    draw(ctx){ ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha); const isHeal = this.amount < 0; let color;
+      if(this.isCrit){ color = '#ffd54f'; }
+      else if(this.isPoison){ color = '#1b5e20'; }
+      else if(isHeal){ color = '#b9f6ca'; }
+      else { color = '#fff'; }
+      ctx.fillStyle = color; ctx.font = this.isCrit ? '24px system-ui' : '20px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
       const text = this.amount > 0 ? `-${this.amount}` : `+${Math.abs(this.amount)}`;
       const display = this.isCrit ? `${text}!` : text;
       ctx.strokeText(display, this.x, this.y); ctx.fillText(display, this.x, this.y); ctx.restore(); }
@@ -32,7 +38,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
   const damagePopups = [];
 
-  function spawnDamage(x,y,amount,isCrit=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit)); }
+  function spawnDamage(x,y,amount,isCrit=false,isPoison=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit,isPoison)); }
 
   // Ball is defined in ./ball.js and imported above. The Ball API used here:
   // new Ball(x,y,color, { r, speed, hp, damage })
@@ -45,9 +51,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*3); // 0: base Ball, 1: SmallBall, 2: BigBall
+      const t = Math.floor(Math.random()*4); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
+      if(t === 3) return new PoisonBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -126,6 +133,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // show crit visual on attacker(s)
           if(aCrit){ A.lastCrit = 700; }
           if(bCrit){ B.lastCrit = 700; }
+          // apply poison effects (if the attacker type implements it)
+          if(typeof B.applyPoison === 'function'){ B.applyPoison(A, spawnDamage); }
+          if(typeof A.applyPoison === 'function'){ A.applyPoison(B, spawnDamage); }
+
           if(A.hp <= 0){ A.hp = 0; A.alive = false; A.vx = A.vy = 0; }
           if(B.hp <= 0){ B.hp = 0; B.alive = false; B.vx = B.vy = 0; }
         }
@@ -192,8 +203,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const bPct = Math.max(0, Math.min(1, B.hp / B.maxHp));
     hpAfill.style.width = `${aPct*100}%`;
     hpBfill.style.width = `${bPct*100}%`;
-    hpAtext.textContent = `${Math.round(A.hp)} / ${A.maxHp}`;
-    hpBtext.textContent = `${Math.round(B.hp)} / ${B.maxHp}`;
+    // include type name and color the text using the ball's color
+    hpAtext.textContent = `${A.typeName} — ${Math.round(A.hp)} / ${A.maxHp}`;
+    hpBtext.textContent = `${B.typeName} — ${Math.round(B.hp)} / ${B.maxHp}`;
+    hpAtext.style.color = A.color;
+    hpBtext.style.color = B.color;
     // color shift: green -> orange -> red
     hpAfill.style.background = aPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (aPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
     hpBfill.style.background = bPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (bPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
