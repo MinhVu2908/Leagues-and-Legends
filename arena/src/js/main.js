@@ -7,6 +7,7 @@ import { IceBall } from './iceBall.js';
 import { StunBall } from './stunBall.js';
 import { FeatherBall } from './featherBall.js';
 import { MineBall } from './mineBall.js';
+import { RageBall } from './rageBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -75,12 +76,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = true;
+    const TEMP_SPAWN = false;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new FeatherBall(a.x, a.y, '#90caf9', {});
+      const ballA = new RageBall(a.x, a.y, '#90caf9', {});
       const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
@@ -92,7 +93,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*9); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall
+      const t = Math.floor(Math.random()*10); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -101,6 +102,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t === 6) return new StunBall(x,y,color, { });
       if(t === 7) return new FeatherBall(x,y,color, { });
       if(t === 8) return new MineBall(x,y,color, { });
+      if(t === 9) return new RageBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -200,6 +202,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // apply stun effects (if the attacker type implements it)
           if(typeof B.applyStun === 'function'){ B.applyStun(A); }
           if(typeof A.applyStun === 'function'){ A.applyStun(B); }
+          // record hits on RageBall when it receives damage (triggers rage mode)
+          if(typeof A.recordHit === 'function' && rawBDamage > 0){ A.recordHit(); }
+          if(typeof B.recordHit === 'function' && rawADamage > 0){ B.recordHit(); }
 
           // slightly randomize directions to avoid sticking/circling while preserving speed
           if(typeof A.randomize === 'function') A.randomize();
