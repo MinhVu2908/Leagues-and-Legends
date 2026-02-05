@@ -106,8 +106,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t === 8) return new MineBall(x,y,color, { });
       if(t === 9) return new RageBall(x,y,color, { });
       if(t === 10) return new TeleBall(x,y,color, { });
-      if(t === 11) return new BoomerangBall(x,y,color, { });
-      if(t === 12) return new HoshimiMiyabi(x,y,color, { });
+      //if(t === 11) return new BoomerangBall(x,y,color, { });
+      if(t === 11) return new HoshimiMiyabi(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       // collect mines spawned by any ball (MineBall sets pendingMines)
       for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
       // collect boomerangs spawned by any ball (BoomerangBall sets pendingBoomerangs)
-      for(const b of balls){ if(b.pendingBoomerangs && b.pendingBoomerangs.length){ for(const bo of b.pendingBoomerangs){ boomerangs.push(bo); } b.pendingBoomerangs.length = 0; } }
+      //for(const b of balls){ if(b.pendingBoomerangs && b.pendingBoomerangs.length){ for(const bo of b.pendingBoomerangs){ boomerangs.push(bo); } b.pendingBoomerangs.length = 0; } }
       resolve();
       for(const b of balls){ b.draw(ctx); }
     }
