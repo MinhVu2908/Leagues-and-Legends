@@ -9,6 +9,7 @@ import { FeatherBall } from './featherBall.js';
 import { MineBall } from './mineBall.js';
 import { RageBall } from './rageBall.js';
 import { TeleBall } from './teleBall.js';
+import { HoshimiMiyabi } from './hoshimiMiyabi.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -77,13 +78,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new TeleBall(a.x, a.y, '#90caf9', {});
-      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new HoshimiMiyabi(a.x, a.y, '#90caf9', {});
+      const ballB = new FeatherBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -94,7 +95,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*11); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall
+      const t = Math.floor(Math.random()*13); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: HoshimiMiyabi
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -105,6 +106,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(t === 8) return new MineBall(x,y,color, { });
       if(t === 9) return new RageBall(x,y,color, { });
       if(t === 10) return new TeleBall(x,y,color, { });
+      if(t === 11) return new BoomerangBall(x,y,color, { });
+      if(t === 12) return new HoshimiMiyabi(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -119,6 +122,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   let feathers = [];
   // global mine projectiles
   let mines = [];
+  // global boomerang projectiles
+  let boomerangs = [];
+  // Hoshimi Miyabi special attack state
+  let hoshimiAttacking = false;
+  let hoshimiAttacker = null;
 
   let previouslyColliding = false;
   // healing orb management
@@ -211,6 +219,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // record hits on RageBall when it receives damage (triggers rage mode)
           if(typeof A.recordHit === 'function' && rawBDamage > 0){ A.recordHit(); }
           if(typeof B.recordHit === 'function' && rawADamage > 0){ B.recordHit(); }
+          // track hits for HoshimiMiyabi when it DEALS damage (not when it receives)
+          if(B instanceof HoshimiMiyabi && rawBDamage > 0){ B.hitCount++; }
+          if(A instanceof HoshimiMiyabi && rawADamage > 0){ A.hitCount++; }
+          // check for HoshimiMiyabi special attack trigger (5 hits MADE by attacker)
+          if(B instanceof HoshimiMiyabi && B.hitCount >= B.hitThreshold){ 
+            hoshimiAttacking = true; 
+            hoshimiAttacker = B;
+            B.startAttack(A);
+            B.hitCount = 0; // reset hit counter for next attack
+          }
+          if(A instanceof HoshimiMiyabi && A.hitCount >= A.hitThreshold){ 
+            hoshimiAttacking = true; 
+            hoshimiAttacker = A;
+            A.startAttack(B);
+            A.hitCount = 0; // reset hit counter for next attack
+          }
 
           // slightly randomize directions to avoid sticking/circling while preserving speed
           if(typeof A.randomize === 'function') A.randomize();
@@ -246,15 +270,43 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const nowDt = 16; // ms per frame (approx)
     ctx.clearRect(0,0,W,H);
     ctx.strokeStyle='#000'; ctx.lineWidth=6; ctx.strokeRect(2,2,W-4,H-4);
-    for(const b of balls){ if(b.alive) b.update({ W, H }, nowDt); }
-    // collect spikes spawned by any ball (SpikerBall sets pendingSpikes)
-    for(const b of balls){ if(b.pendingSpikes && b.pendingSpikes.length){ for(const s of b.pendingSpikes){ spikes.push(s); } b.pendingSpikes.length = 0; } }
-    // collect feathers spawned by any ball (FeatherBall sets pendingFeathers)
-    for(const b of balls){ if(b.pendingFeathers && b.pendingFeathers.length){ for(const f of b.pendingFeathers){ feathers.push(f); } b.pendingFeathers.length = 0; } }
-    // collect mines spawned by any ball (MineBall sets pendingMines)
-    for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
-    resolve();
-    for(const b of balls){ b.draw(ctx); }
+    
+    // Handle Hoshimi Miyabi special attack
+    if (hoshimiAttacking && hoshimiAttacker) {
+      const attacker = hoshimiAttacker;
+      const defender = balls[0] === attacker ? balls[1] : balls[0];
+      
+      // Update attack animation and get damage instances
+      const attackResult = attacker.updateAttack({ W, H }, defender.x, defender.y);
+      
+      // Apply each cut's damage
+      for (const damageAmount of attackResult.damageDealt) {
+        applyDamageTo(defender, damageAmount, false, false);
+      }
+      
+      if (attackResult.finished) {
+        // Attack finished
+        hoshimiAttacking = false;
+        hoshimiAttacker = null;
+      }
+      
+      // Don't update balls normally during attack, but keep them frozen
+      // and only draw them
+      for(const b of balls){ b.draw(ctx); }
+    } else {
+      // Normal game loop when not attacking
+      for(const b of balls){ if(b.alive) b.update({ W, H }, nowDt); }
+      // collect spikes spawned by any ball (SpikerBall sets pendingSpikes)
+      for(const b of balls){ if(b.pendingSpikes && b.pendingSpikes.length){ for(const s of b.pendingSpikes){ spikes.push(s); } b.pendingSpikes.length = 0; } }
+      // collect feathers spawned by any ball (FeatherBall sets pendingFeathers)
+      for(const b of balls){ if(b.pendingFeathers && b.pendingFeathers.length){ for(const f of b.pendingFeathers){ feathers.push(f); } b.pendingFeathers.length = 0; } }
+      // collect mines spawned by any ball (MineBall sets pendingMines)
+      for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
+      // collect boomerangs spawned by any ball (BoomerangBall sets pendingBoomerangs)
+      for(const b of balls){ if(b.pendingBoomerangs && b.pendingBoomerangs.length){ for(const bo of b.pendingBoomerangs){ boomerangs.push(bo); } b.pendingBoomerangs.length = 0; } }
+      resolve();
+      for(const b of balls){ b.draw(ctx); }
+    }
 
     // update + draw spikes
     for(let i = spikes.length-1; i >= 0; --i){ const s = spikes[i]; s.update({ W, H }, nowDt); if(!s.alive){ spikes.splice(i,1); continue; }
@@ -285,6 +337,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
       }
     }
     for(const m of mines){ m.draw(ctx); }
+
+    // update + draw boomerangs
+    for(let i = boomerangs.length-1; i >= 0; --i){ const bo = boomerangs[i]; bo.update({ W, H }, nowDt); if(!bo.alive){ boomerangs.splice(i,1); continue; }
+      // check collision with balls (don't hit owner, passes through but damages)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === bo.owner) continue; const d = dist(bb.x,bb.y,bo.x,bo.y); if(d <= bb.r + bo.r){ // hit
+        if(bo.canDamage(bb)){ applyDamageTo(bb, bo.damage, false, false); bo.markDamaged(bb); }
+      }
+      }
+    }
+    for(const bo of boomerangs){ bo.draw(ctx); }
 
     // draw orb (if present)
     if(orb && orb.alive){ orb.update(nowDt); orb.draw(ctx); }
