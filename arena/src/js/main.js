@@ -5,8 +5,8 @@ import { PoisonBall } from './poisonBall.js';
 import { SpikerBall } from './spikerBall.js';
 import { IceBall } from './iceBall.js';
 import { StunBall } from './stunBall.js';
+import { FeatherBall } from './featherBall.js';
 import { HealingOrb } from './healingOrb.js';
-import { DirectionOrb } from './directionOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const canvas = document.getElementById('c');
@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function spawnDamage(x,y,amount,isCrit=false,isPoison=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit,isPoison)); }
 
   // audio (quiet for now)
-  const hitAudio = new Audio('../sound/hit.mp3');
-  const critAudio = new Audio('../sound/critHit.mp3');
+  const hitAudio = new Audio('../arena/src/sound/hit.mp3');
+  const critAudio = new Audio('../arena/src/sound/critHit.mp3');
   hitAudio.volume = 0.46;
   critAudio.volume = 0.46;
 
@@ -74,13 +74,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
       const ballA = new BigBall(a.x, a.y, '#90caf9', {});
-      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      const ballB = new FeatherBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -91,13 +91,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*7); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall
+      const t = Math.floor(Math.random()*8); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
       if(t === 4) return new SpikerBall(x,y,color, { });
       if(t === 5) return new IceBall(x,y,color, { });
       if(t === 6) return new StunBall(x,y,color, { });
+      if(t === 7) return new FeatherBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -108,22 +109,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
   let balls = spawnTwo();
   // global spike projectiles
   let spikes = [];
+  // global feather projectiles
+  let feathers = [];
 
   let previouslyColliding = false;
-  // orb management (HealingOrb or DirectionOrb)
+  // healing orb management
   let orb = null;
   function spawnOrb(){
     const padding = 24;
     const x = padding + Math.random()*(W-2*padding);
     const y = padding + Math.random()*(H-2*padding);
-    // alternate between HealingOrb and DirectionOrb
-    const orbType = Math.random() < 0.5 ? 'heal' : 'direction';
-    if(orbType === 'heal'){
-      orb = new HealingOrb(x,y, 300, 14);
-    } else {
-      orb = new DirectionOrb(x,y, 14);
-    }
-    orb.type = orbType;
+    orb = new HealingOrb(x,y, 300, 14);
   }
   spawnOrb();
 
@@ -221,17 +217,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(!b.alive) continue;
       const d = dist(b.x,b.y,orb.x,orb.y);
       if(d <= b.r + orb.r){
-        // handle orb type
-        if(orb.type === 'heal'){
-          const heal = Math.min(orb.healAmount, b.maxHp - b.hp);
-          if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
-        } else if(orb.type === 'direction'){
-          // randomize direction (preserve speed)
-          const speed = Math.hypot(b.vx, b.vy);
-          const angle = Math.random() * Math.PI * 2;
-          b.vx = Math.cos(angle) * speed;
-          b.vy = Math.sin(angle) * speed;
-        }
+        const heal = Math.min(orb.healAmount, b.maxHp - b.hp);
+        if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
         orb.alive = false;
         // respawn orb after random delay
         setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
@@ -247,6 +234,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     for(const b of balls){ if(b.alive) b.update({ W, H }, nowDt); }
     // collect spikes spawned by any ball (SpikerBall sets pendingSpikes)
     for(const b of balls){ if(b.pendingSpikes && b.pendingSpikes.length){ for(const s of b.pendingSpikes){ spikes.push(s); } b.pendingSpikes.length = 0; } }
+    // collect feathers spawned by any ball (FeatherBall sets pendingFeathers)
+    for(const b of balls){ if(b.pendingFeathers && b.pendingFeathers.length){ for(const f of b.pendingFeathers){ feathers.push(f); } b.pendingFeathers.length = 0; } }
     resolve();
     for(const b of balls){ b.draw(ctx); }
 
@@ -259,6 +248,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
       }
     }
     for(const s of spikes){ s.draw(ctx); }
+
+    // update + draw feathers
+    for(let i = feathers.length-1; i >= 0; --i){ const f = feathers[i]; f.update({ W, H }, nowDt); if(!f.alive){ feathers.splice(i,1); continue; }
+      // check collision with balls (don't hit owner)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === f.owner) continue; const d = dist(bb.x,bb.y,f.x,f.y); if(d <= bb.r + f.r){ // hit
+        applyDamageTo(bb, f.damage, false, false);
+        f.alive = false; break; }
+      }
+    }
+    for(const f of feathers){ f.draw(ctx); }
 
     // draw orb (if present)
     if(orb && orb.alive){ orb.update(nowDt); orb.draw(ctx); }
