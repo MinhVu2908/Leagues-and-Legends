@@ -43,18 +43,43 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   function spawnDamage(x,y,amount,isCrit=false,isPoison=false){ damagePopups.push(new DamagePopup(x,y,amount,isCrit,isPoison)); }
 
+  // audio (quiet for now)
+  const hitAudio = new Audio('../arena/src/sound/hit.mp3');
+  const critAudio = new Audio('../arena/src/sound/critHit.mp3');
+  hitAudio.volume = 0.46;
+  critAudio.volume = 0.46;
+
+  // centralized damage applier: applies vulnerability multiplier once if present, updates HP, shows popup
+  function applyDamageTo(target, amount, isCrit=false, isPoison=false){
+    if(!target || !target.alive) return;
+    if(!amount || amount <= 0) return;
+    // apply one-time vulnerability multiplier
+    if(target.vulnerableMultiplier && !target.vulnerableUsed){
+      amount = Math.round(amount * target.vulnerableMultiplier);
+      target.vulnerableUsed = true;
+    }
+    target.hp -= amount;
+    if(target.hp <= 0){ target.hp = 0; target.alive = false; target.vx = target.vy = 0; }
+    spawnDamage(target.x, target.y - target.r - 6, amount, isCrit, isPoison);
+    // play sounds (quiet)
+    try{
+      if(isCrit){ critAudio.currentTime = 0; critAudio.play().catch(()=>{}); }
+      else { hitAudio.currentTime = 0; hitAudio.play().catch(()=>{}); }
+    } catch(e) { /* ignore */ }
+  }
+
   // Ball is defined in ./ball.js and imported above. The Ball API used here:
   // new Ball(x,y,color, { r, speed, hp, damage })
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new SmallBall(a.x, a.y, '#90caf9', {});
-      const ballB = new SmallBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new BigBall(a.x, a.y, '#90caf9', {});
+      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -145,32 +170,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
           const now = Date.now();
           const aIsStunned = A.stunExpireAt && A.stunExpireAt > now;
           const bIsStunned = B.stunExpireAt && B.stunExpireAt > now;
-          
+
           const bCrit = Math.random() < (B.critChance || 0);
           const aCrit = Math.random() < (A.critChance || 0);
-          let bDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
-          let aDamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
-          
-          // StunBall bonus damage: deal 1.5x damage to stunned enemy, but only once per stun
-          if(B.typeName === 'Stun Ball' && aIsStunned && !A.stunHitByStunBall){
-            bDamage = Math.round(bDamage * 1.5);
-            A.stunHitByStunBall = true; // mark that this stunned target was already hit by StunBall
-          }
-          if(A.typeName === 'Stun Ball' && bIsStunned && !B.stunHitByStunBall){
-            aDamage = Math.round(aDamage * 1.5);
-            B.stunHitByStunBall = true; // mark that this stunned target was already hit by StunBall
-          }
-          
-          A.hp -= bDamage; B.hp -= aDamage;
-          // spawn damage popups showing damage taken (mark crits)
-          if(bDamage > 0) spawnDamage(A.x, A.y - A.r - 6, bDamage, bCrit);
-          if(aDamage > 0) spawnDamage(B.x, B.y - B.r - 6, aDamage, aCrit);
+          const rawBDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
+          const rawADamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
+
+          // apply damage through centralized helper (handles one-time vulnerability multiplier)
+          applyDamageTo(A, rawBDamage, bCrit, false);
+          applyDamageTo(B, rawADamage, aCrit, false);
+
           // show crit visual on attacker(s)
           if(aCrit && !aIsStunned){ A.lastCrit = 700; }
           if(bCrit && !bIsStunned){ B.lastCrit = 700; }
-          // apply poison effects (if the attacker type implements it)
-          if(typeof B.applyPoison === 'function'){ B.applyPoison(A, spawnDamage); }
-          if(typeof A.applyPoison === 'function'){ A.applyPoison(B, spawnDamage); }
+          // apply poison effects (if the attacker type implements it) — pass damage applier
+          if(typeof B.applyPoison === 'function'){ B.applyPoison(A, applyDamageTo); }
+          if(typeof A.applyPoison === 'function'){ A.applyPoison(B, applyDamageTo); }
           // apply slow effects (if the attacker type implements it)
           if(typeof B.applySlow === 'function'){ B.applySlow(A); }
           if(typeof A.applySlow === 'function'){ A.applySlow(B); }
@@ -202,7 +217,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
         orb.alive = false;
         // respawn orb after random delay
-        setTimeout(()=>{ spawnOrb(); }, 1000 + Math.random()*4000);
+        setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
         break;
       }
     }
@@ -221,8 +236,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     // update + draw spikes
     for(let i = spikes.length-1; i >= 0; --i){ const s = spikes[i]; s.update({ W, H }, nowDt); if(!s.alive){ spikes.splice(i,1); continue; }
       // check collision with balls (don't hit owner)
-      for(const bb of balls){ if(!bb.alive) continue; if(bb === s.owner) continue; const d = dist(bb.x,bb.y,s.x,s.y); if(d <= bb.r + s.r){ // hit
-          bb.hp -= s.damage; spawnDamage(bb.x, bb.y - bb.r - 6, s.damage, false); if(bb.hp <= 0){ bb.hp = 0; bb.alive = false; bb.vx = bb.vy = 0; }
+        for(const bb of balls){ if(!bb.alive) continue; if(bb === s.owner) continue; const d = dist(bb.x,bb.y,s.x,s.y); if(d <= bb.r + s.r){ // hit
+          applyDamageTo(bb, s.damage, false, false);
           s.alive = false; break; }
       }
     }

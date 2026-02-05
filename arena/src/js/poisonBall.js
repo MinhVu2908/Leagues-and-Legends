@@ -13,8 +13,8 @@ export class PoisonBall extends Ball {
   }
 
   // target: Ball instance to receive poison
-  // spawnDamage: function(x,y,amount,isCrit) used to display damage popups (passed from main)
-  applyPoison(target, spawnDamage){
+  // applyFn: function(target, amount, isCrit=false, isPoison=false) used to apply damage centrally (passed from main)
+  applyPoison(target, applyFn){
     if(!target || !target.alive) return;
     const ticks = Math.max(1, Math.floor(this.poisonDuration / this.poisonInterval));
     let applied = 0;
@@ -22,9 +22,11 @@ export class PoisonBall extends Ball {
       if(!target || !target.alive){ clearInterval(id); return; }
       applied += 1;
       const dmg = Math.round(this.poisonDmg);
-      target.hp -= dmg;
-      if(typeof spawnDamage === 'function'){
-        spawnDamage(target.x, target.y - target.r - 6, dmg, false, true);
+      if(typeof applyFn === 'function'){
+        applyFn(target, dmg, false, true);
+      } else {
+        // fallback: directly apply
+        target.hp -= dmg;
       }
       if(target.hp <= 0){ target.hp = 0; target.alive = false; target.vx = target.vy = 0; clearInterval(id); }
       if(applied >= ticks) { clearInterval(id); }

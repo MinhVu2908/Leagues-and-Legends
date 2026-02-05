@@ -4,10 +4,11 @@ export class StunBall extends Ball {
   // StunBall applies stun stacks on hit; after 4 hits, target is stunned for 3 seconds
   // options: { r, speed, hp, damage, maxStunStacks, stunDuration }
   constructor(x, y, color, options = {}){
-    const defaults = { r: 36, speed: 11, hp: 1500, damage: 100, critChance: 0.10, maxStunStacks: 4, stunDuration: 3000 };
+    const defaults = { r: 36, speed: 11, hp: 1500, damage: 100, critChance: 0.10, maxStunStacks: 4, stunDuration: 3000, bonusOnStunMultiplier: 1.5 };
     super(x, y, color, Object.assign({}, defaults, options));
     this.maxStunStacks = options.maxStunStacks ?? defaults.maxStunStacks;
     this.stunDuration = options.stunDuration ?? defaults.stunDuration;
+    this.bonusOnStunMultiplier = options.bonusOnStunMultiplier ?? defaults.bonusOnStunMultiplier;
     this.typeName = 'Stun Ball';
   }
 
@@ -31,6 +32,9 @@ export class StunBall extends Ball {
     // If max stacks reached, apply stun
     if(target.stunStacks >= this.maxStunStacks){
       target.stunExpireAt = now + this.stunDuration;
+      // grant one-time vulnerability multiplier for next damage
+      target.vulnerableMultiplier = this.bonusOnStunMultiplier;
+      target.vulnerableUsed = false;
       target.stunStacks = 0; // reset stacks after stunning
     }
   }
