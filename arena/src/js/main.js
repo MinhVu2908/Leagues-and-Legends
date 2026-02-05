@@ -2,6 +2,8 @@ import { Ball } from './ball.js';
 import { SmallBall } from './smallBall.js';
 import { BigBall } from './bigBall.js';
 import { PoisonBall } from './poisonBall.js';
+import { SpikerBall } from './spikerBall.js';
+import { IceBall } from './iceBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -51,10 +53,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*4); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall
+      const t = Math.floor(Math.random()*6); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
+      if(t === 4) return new SpikerBall(x,y,color, { });
+      if(t === 5) return new IceBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -63,6 +67,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 
   let balls = spawnTwo();
+  // global spike projectiles
+  let spikes = [];
 
   let previouslyColliding = false;
   // healing orb management
@@ -136,6 +142,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
           // apply poison effects (if the attacker type implements it)
           if(typeof B.applyPoison === 'function'){ B.applyPoison(A, spawnDamage); }
           if(typeof A.applyPoison === 'function'){ A.applyPoison(B, spawnDamage); }
+          // apply slow effects (if the attacker type implements it)
+          if(typeof B.applySlow === 'function'){ B.applySlow(A); }
+          if(typeof A.applySlow === 'function'){ A.applySlow(B); }
+
+          // slightly randomize directions to avoid sticking/circling while preserving speed
+          if(typeof A.randomize === 'function') A.randomize();
+          if(typeof B.randomize === 'function') B.randomize();
 
           if(A.hp <= 0){ A.hp = 0; A.alive = false; A.vx = A.vy = 0; }
           if(B.hp <= 0){ B.hp = 0; B.alive = false; B.vx = B.vy = 0; }
@@ -168,8 +181,21 @@ document.addEventListener('DOMContentLoaded', ()=>{
     ctx.clearRect(0,0,W,H);
     ctx.strokeStyle='#000'; ctx.lineWidth=6; ctx.strokeRect(2,2,W-4,H-4);
     for(const b of balls){ if(b.alive) b.update({ W, H }, nowDt); }
+    // collect spikes spawned by any ball (SpikerBall sets pendingSpikes)
+    for(const b of balls){ if(b.pendingSpikes && b.pendingSpikes.length){ for(const s of b.pendingSpikes){ spikes.push(s); } b.pendingSpikes.length = 0; } }
     resolve();
     for(const b of balls){ b.draw(ctx); }
+
+    // update + draw spikes
+    for(let i = spikes.length-1; i >= 0; --i){ const s = spikes[i]; s.update({ W, H }, nowDt); if(!s.alive){ spikes.splice(i,1); continue; }
+      // check collision with balls (don't hit owner)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === s.owner) continue; const d = dist(bb.x,bb.y,s.x,s.y); if(d <= bb.r + s.r){ // hit
+          bb.hp -= s.damage; spawnDamage(bb.x, bb.y - bb.r - 6, s.damage, false); if(bb.hp <= 0){ bb.hp = 0; bb.alive = false; bb.vx = bb.vy = 0; }
+          s.alive = false; break; }
+      }
+    }
+    for(const s of spikes){ s.draw(ctx); }
+
     // draw orb (if present)
     if(orb && orb.alive){ orb.update(nowDt); orb.draw(ctx); }
     // update + draw damage popups

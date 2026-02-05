@@ -11,17 +11,39 @@ export class Ball {
     this.critChance = critChance;
     this.lastCrit = 0; // ms remaining for crit visual
     this.typeName = options.typeName || 'Normal Ball';
+    this.slow = null; // active slow: { percent: 0.3, remaining: ms }
   }
 
   update(bounds, dt = 16){
     // bounds: { W, H }
-    this.x += this.vx; this.y += this.vy;
+    // apply single active slow multiplicatively to movement (no stacking)
+    let mult = 1;
+    if(this.slow){
+      this.slow.remaining -= dt;
+      if(this.slow.remaining <= 0){ this.slow = null; }
+      else { mult *= (1 - (this.slow.percent || 0)); }
+    }
+    this.x += this.vx * mult; this.y += this.vy * mult;
     const W = bounds.W, H = bounds.H;
     if(this.x < this.r){ this.x=this.r; this.vx = Math.abs(this.vx); this.randomize(); }
     if(this.x > W - this.r){ this.x=W-this.r; this.vx = -Math.abs(this.vx); this.randomize(); }
     if(this.y < this.r){ this.y=this.r; this.vy = Math.abs(this.vy); this.randomize(); }
     if(this.y > H - this.r){ this.y=H-this.r; this.vy = -Math.abs(this.vy); this.randomize(); }
     if(this.lastCrit > 0){ this.lastCrit = Math.max(0, this.lastCrit - dt); }
+  }
+
+  applySlow(percent, duration){
+    if(!percent || percent <= 0) return;
+    if(!duration || duration <= 0) return;
+    // do not stack slows — keep a single slow effect
+    if(!this.slow){
+      this.slow = { percent: percent, remaining: duration };
+      return;
+    }
+    // if new slow is stronger, replace and reset duration
+    if(percent > this.slow.percent){ this.slow.percent = percent; this.slow.remaining = duration; return; }
+    // otherwise refresh remaining to the larger of existing/new
+    this.slow.remaining = Math.max(this.slow.remaining, duration);
   }
 
   randomize(){ const ang = Math.atan2(this.vy,this.vx) + (Math.random()-0.5)*0.6; const mag = Math.hypot(this.vx,this.vy); this.vx = Math.cos(ang)*mag; this.vy = Math.sin(ang)*mag; }
@@ -36,6 +58,11 @@ export class Ball {
     ctx.beginPath(); ctx.fillStyle=this.alive ? this.color : 'rgba(120,120,120,0.45)'; ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.stroke();
     ctx.restore();
+    // draw slow visual if a slow is active
+    if(this.slow){
+      ctx.save();
+      ctx.beginPath(); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(33,150,243,0.5)'; ctx.arc(this.x,this.y,this.r+4,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    }
     // draw type name above the ball
     if(this.typeName){
       ctx.save();
