@@ -10,6 +10,7 @@ import { MineBall } from './mineBall.js';
 import { RageBall } from './rageBall.js';
 import { TeleBall } from './teleBall.js';
 import { MiyaBall } from './miyaBall.js';
+import { MachineGunBall } from './machineGunBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -25,6 +26,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const hpBfill = document.getElementById('hpB-fill');
   const hpAtext = document.getElementById('hpA-text');
   const hpBtext = document.getElementById('hpB-text');
+  const comboAtext = document.getElementById('comboA-text');
+  const comboBtext = document.getElementById('comboB-text');
   const countdownEl = document.getElementById('countdown');
 
   function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); }
@@ -56,7 +59,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
   critAudio.volume = 0.46;
 
   // centralized damage applier: applies vulnerability multiplier once if present, updates HP, shows popup
-  function applyDamageTo(target, amount, isCrit=false, isPoison=false){
+  function applyDamageTo(target, amount, isCrit=false, isPoison=false, attacker=null){
     if(!target || !target.alive) return;
     if(!amount || amount <= 0) return;
     // apply one-time vulnerability multiplier
@@ -65,8 +68,14 @@ const critAudio = new Audio('/sound/critHit.mp3');
       target.vulnerableUsed = true;
     }
     target.hp -= amount;
-    if(target.hp <= 0){ target.hp = 0; target.alive = false; target.vx = target.vy = 0; }
+    if(target.hp <= 0){ target.hp = 0; target.alive = false; target.vx = target.vy = 0; target.combo = 0; }
     spawnDamage(target.x, target.y - target.r - 6, amount, isCrit, isPoison);
+    // increment combo for attacker
+    if(attacker){
+      if(!attacker.combo) attacker.combo = 0;
+      attacker.combo++;
+      attacker.comboTimer = 1000; // reset 1 second timer
+    }
     // play sounds (quiet)
     try{
       if(isCrit){ critAudio.currentTime = 0; critAudio.play().catch(()=>{}); }
@@ -79,13 +88,13 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new MiyaBall(a.x, a.y, '#90caf9', {});
-      const ballB = new MiyaBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new SpikerBall(a.x, a.y, '#90caf9', {});
+      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -96,7 +105,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*13); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: MiyaBall
+      const t = Math.floor(Math.random()*14); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: MiyaBall, 13: MachineGunBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -109,6 +118,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(t === 10) return new TeleBall(x,y,color, { });
       //if(t === 11) return new BoomerangBall(x,y,color, { });
       if(t === 11) return new MiyaBall(x,y,color, { });
+      if(t === 12) return new MachineGunBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -130,6 +140,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
   let mines = [];
   // global boomerang projectiles
   let boomerangs = [];
+  // global bullet projectiles
+  let bullets = [];
   // MiyaBall special attack state
   let miyaAttacking = false;
   let miyaAttacker = null;
@@ -204,8 +216,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
           const rawADamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
 
           // apply damage through centralized helper (handles one-time vulnerability multiplier)
-          applyDamageTo(A, rawBDamage, bCrit, false);
-          applyDamageTo(B, rawADamage, aCrit, false);
+          applyDamageTo(A, rawBDamage, bCrit, false, B);
+          applyDamageTo(B, rawADamage, aCrit, false, A);
           // TeleBall attempt teleport when taking damage (very low chance to escape + restore HP)
           if(typeof A.attemptTeleport === 'function' && rawBDamage > 0){ A.attemptTeleport({ W, H }, rawBDamage); }
           if(typeof B.attemptTeleport === 'function' && rawADamage > 0){ B.attemptTeleport({ W, H }, rawADamage); }
@@ -287,7 +299,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
       
       // Apply each cut's damage
       for (const damageAmount of attackResult.damageDealt) {
-        applyDamageTo(defender, damageAmount, false, false);
+        applyDamageTo(defender, damageAmount, false, false, attacker);
       }
       
       if (attackResult.finished) {
@@ -308,6 +320,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       for(const b of balls){ if(b.pendingFeathers && b.pendingFeathers.length){ for(const f of b.pendingFeathers){ feathers.push(f); } b.pendingFeathers.length = 0; } }
       // collect mines spawned by any ball (MineBall sets pendingMines)
       for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
+      // collect bullets spawned by any ball (MachineGunBall sets pendingBullets)
+      for(const b of balls){ if(b.pendingBullets && b.pendingBullets.length){ for(const bu of b.pendingBullets){ bullets.push(bu); } b.pendingBullets.length = 0; } }
       // collect boomerangs spawned by any ball (BoomerangBall sets pendingBoomerangs)
       //for(const b of balls){ if(b.pendingBoomerangs && b.pendingBoomerangs.length){ for(const bo of b.pendingBoomerangs){ boomerangs.push(bo); } b.pendingBoomerangs.length = 0; } }
       resolve();
@@ -318,7 +332,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     for(let i = spikes.length-1; i >= 0; --i){ const s = spikes[i]; s.update({ W, H }, nowDt); if(!s.alive){ spikes.splice(i,1); continue; }
       // check collision with balls (don't hit owner)
         for(const bb of balls){ if(!bb.alive) continue; if(bb === s.owner) continue; const d = dist(bb.x,bb.y,s.x,s.y); if(d <= bb.r + s.r){ // hit
-          applyDamageTo(bb, s.damage, false, false);
+          applyDamageTo(bb, s.damage, false, false, s.owner);
           s.alive = false; break; }
       }
     }
@@ -328,7 +342,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     for(let i = feathers.length-1; i >= 0; --i){ const f = feathers[i]; f.update({ W, H }, nowDt); if(!f.alive){ feathers.splice(i,1); continue; }
       // check collision with balls (don't hit owner)
       for(const bb of balls){ if(!bb.alive) continue; if(bb === f.owner) continue; const d = dist(bb.x,bb.y,f.x,f.y); if(d <= bb.r + f.r){ // hit
-        applyDamageTo(bb, f.damage, false, false);
+        applyDamageTo(bb, f.damage, false, false, f.owner);
         f.alive = false; break; }
       }
     }
@@ -338,17 +352,27 @@ const critAudio = new Audio('/sound/critHit.mp3');
     for(let i = mines.length-1; i >= 0; --i){ const m = mines[i]; m.update({ W, H }, nowDt); if(!m.alive){ mines.splice(i,1); continue; }
       // check collision with balls (don't hit owner)
       for(const bb of balls){ if(!bb.alive) continue; if(bb === m.owner) continue; const d = dist(bb.x,bb.y,m.x,m.y); if(d <= bb.r + m.r){ // hit
-        applyDamageTo(bb, m.damage, false, false);
+        applyDamageTo(bb, m.damage, false, false, m.owner);
         m.alive = false; break; }
       }
     }
     for(const m of mines){ m.draw(ctx); }
 
+    // update + draw bullets
+    for(let i = bullets.length-1; i >= 0; --i){ const bu = bullets[i]; bu.update({ W, H }, nowDt); if(!bu.alive){ bullets.splice(i,1); continue; }
+      // check collision with balls (don't hit owner)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === bu.owner) continue; const d = dist(bb.x,bb.y,bu.x,bu.y); if(d <= bb.r + bu.r){ // hit
+        applyDamageTo(bb, bu.damage, false, false, bu.owner);
+        bu.alive = false; break; }
+      }
+    }
+    for(const bu of bullets){ bu.draw(ctx); }
+
     // update + draw boomerangs
     for(let i = boomerangs.length-1; i >= 0; --i){ const bo = boomerangs[i]; bo.update({ W, H }, nowDt); if(!bo.alive){ boomerangs.splice(i,1); continue; }
       // check collision with balls (don't hit owner, passes through but damages)
       for(const bb of balls){ if(!bb.alive) continue; if(bb === bo.owner) continue; const d = dist(bb.x,bb.y,bo.x,bo.y); if(d <= bb.r + bo.r){ // hit
-        if(bo.canDamage(bb)){ applyDamageTo(bb, bo.damage, false, false); bo.markDamaged(bb); }
+        if(bo.canDamage(bb)){ applyDamageTo(bb, bo.damage, false, false, bo.owner); bo.markDamaged(bb); }
       }
       }
     }
@@ -370,7 +394,13 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(respawnMs <= 0){
         // respawn new fight
         balls = spawnTwo();
+        for(const b of balls){ b.combo = 0; }
         damagePopups.length = 0;
+        spikes.length = 0;
+        feathers.length = 0;
+        mines.length = 0;
+        bullets.length = 0;
+        boomerangs.length = 0;
         orb = null; spawnOrb();
         previouslyColliding = false;
         cancelRespawn();
@@ -392,6 +422,9 @@ const critAudio = new Audio('/sound/critHit.mp3');
     hpBtext.textContent = `${B.typeName} — ${Math.round(B.hp)} / ${B.maxHp}`;
     hpAtext.style.color = A.color;
     hpBtext.style.color = B.color;
+    // display combo counters
+    comboAtext.textContent = A.combo ? `Combo: ${A.combo}` : '';
+    comboBtext.textContent = B.combo ? `Combo: ${B.combo}` : '';
     // color shift: green -> orange -> red
     hpAfill.style.background = aPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (aPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
     hpBfill.style.background = bPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (bPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
@@ -400,5 +433,5 @@ const critAudio = new Audio('/sound/critHit.mp3');
   function loop(){ draw(); requestAnimationFrame(loop); }
   loop();
 
-  document.getElementById('reset').addEventListener('click', ()=>{ cancelRespawn(); balls = spawnTwo(); damagePopups.length = 0; orb = null; spawnOrb(); updateHPUI(); });
+  document.getElementById('reset').addEventListener('click', ()=>{ cancelRespawn(); balls = spawnTwo(); for(const b of balls){ b.combo = 0; } damagePopups.length = 0; orb = null; spawnOrb(); updateHPUI(); });
 });

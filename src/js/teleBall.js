@@ -3,7 +3,7 @@ import { Ball } from './ball.js';
 export class TeleBall extends Ball {
   // TeleBall has a low chance to teleport away and restore HP when hit
   constructor(x, y, color, options = {}) {
-    const defaults = { r: 36, speed: 11, hp: 1100, damage: 75, critChance: 0.08, teleportChance: 0.10 };
+    const defaults = { r: 36, speed: 11, hp: 1100, damage: 75, critChance: 0.08, teleportChance: 0.25 };
     super(x, y, color, Object.assign({}, defaults, options));
     this.teleportChance = options.teleportChance ?? defaults.teleportChance; // 8% chance to teleport
     this.typeName = 'Tele Ball';

@@ -12,6 +12,8 @@ export class Ball {
     this.lastCrit = 0; // ms remaining for crit visual
     this.typeName = options.typeName || 'Normal Ball';
     this.slow = null; // active slow: { percent: 0.3, remaining: ms }
+    this.combo = 0; // combo counter
+    this.comboTimer = 0; // ms until combo resets
   }
 
   update(bounds, dt = 16){
@@ -38,6 +40,11 @@ export class Ball {
     if(this.y < this.r){ this.y=this.r; this.vy = Math.abs(this.vy); this.randomize(); }
     if(this.y > H - this.r){ this.y=H-this.r; this.vy = -Math.abs(this.vy); this.randomize(); }
     if(this.lastCrit > 0){ this.lastCrit = Math.max(0, this.lastCrit - dt); }
+    // reset combo if timer expires
+    if(this.combo > 0){
+      this.comboTimer -= dt;
+      if(this.comboTimer <= 0){ this.combo = 0; this.comboTimer = 0; }
+    }
   }
 
   applySlow(percent, duration){
