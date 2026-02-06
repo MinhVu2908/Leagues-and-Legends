@@ -12,6 +12,7 @@ import { TeleBall } from './teleBall.js';
 import { MiyaBall } from './miyaBall.js';
 import { MachineGunBall } from './machineGunBall.js';
 import { SamiBall } from './samiBall.js';
+import { LuxiBall } from './luxiBall.js';
 import { HealingOrb } from './healingOrb.js';
 import { TestBall } from './testBall.js';
 
@@ -95,8 +96,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new SamiBall(a.x, a.y, '#90caf9', {});
-      const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new LuxiBall(a.x, a.y, '#90caf9', {});
+      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -107,7 +108,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*15); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: MiyaBall, 12: SamiBall, 13: MachineGunBall
+      const t = Math.floor(Math.random()*16); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: MiyaBall, 12: SamiBall, 13: LuxiBall, 14: MachineGunBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -121,7 +122,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       //if(t === 11) return new BoomerangBall(x,y,color, { });
       if(t === 11) return new MiyaBall(x,y,color, { });
       if(t === 12) return new SamiBall(x,y,color, { });
-      if(t === 13) return new MachineGunBall(x,y,color, { });
+      if(t === 13) return new LuxiBall(x,y,color, { });
+      if(t === 14) return new MachineGunBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -145,6 +147,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
   let boomerangs = [];
   // global bullet projectiles
   let bullets = [];
+  // global laser projectiles
+  let lasers = [];
   // MiyaBall special attack state
   let miyaAttacking = false;
   let miyaAttacker = null;
@@ -328,6 +332,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       for(const b of balls){ if(b.pendingMines && b.pendingMines.length){ for(const m of b.pendingMines){ mines.push(m); } b.pendingMines.length = 0; } }
       // collect bullets spawned by any ball (MachineGunBall sets pendingBullets)
       for(const b of balls){ if(b.pendingBullets && b.pendingBullets.length){ for(const bu of b.pendingBullets){ bullets.push(bu); } b.pendingBullets.length = 0; } }
+      // collect lasers spawned by any ball (LuxiBall sets pendingLasers)
+      for(const b of balls){ if(b.pendingLasers && b.pendingLasers.length){ for(const l of b.pendingLasers){ lasers.push(l); } b.pendingLasers.length = 0; } }
       // collect boomerangs spawned by any ball (BoomerangBall sets pendingBoomerangs)
       //for(const b of balls){ if(b.pendingBoomerangs && b.pendingBoomerangs.length){ for(const bo of b.pendingBoomerangs){ boomerangs.push(bo); } b.pendingBoomerangs.length = 0; } }
       resolve();
@@ -373,6 +379,17 @@ const critAudio = new Audio('/sound/critHit.mp3');
       }
     }
     for(const bu of bullets){ bu.draw(ctx); }
+
+    // update + draw lasers
+    for(let i = lasers.length-1; i >= 0; --i){ const L = lasers[i]; L.update({ W, H }, nowDt); if(!L.alive){ lasers.splice(i,1); continue; }
+      // check collision with balls (don't hit owner)
+      for(const bb of balls){ if(!bb.alive) continue; if(bb === L.owner) continue; if(L.hasDamaged(bb)) continue; if(L.intersectsCircle(bb.x, bb.y, bb.r)){
+          applyDamageTo(bb, L.damage, false, false, L.owner);
+          L.markDamaged(bb);
+        }
+      }
+    }
+    for(const L of lasers){ L.draw(ctx); }
 
     // update + draw boomerangs
     for(let i = boomerangs.length-1; i >= 0; --i){ const bo = boomerangs[i]; bo.update({ W, H }, nowDt); if(!bo.alive){ boomerangs.splice(i,1); continue; }
