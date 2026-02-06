@@ -11,7 +11,9 @@ import { RageBall } from './rageBall.js';
 import { TeleBall } from './teleBall.js';
 import { MiyaBall } from './miyaBall.js';
 import { MachineGunBall } from './machineGunBall.js';
+import { SamiBall } from './samiBall.js';
 import { HealingOrb } from './healingOrb.js';
+import { TestBall } from './testBall.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const canvas = document.getElementById('c');
@@ -88,13 +90,13 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new SpikerBall(a.x, a.y, '#90caf9', {});
-      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new SamiBall(a.x, a.y, '#90caf9', {});
+      const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -105,7 +107,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*14); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: MiyaBall, 13: MachineGunBall
+      const t = Math.floor(Math.random()*15); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: MiyaBall, 12: SamiBall, 13: MachineGunBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -118,7 +120,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(t === 10) return new TeleBall(x,y,color, { });
       //if(t === 11) return new BoomerangBall(x,y,color, { });
       if(t === 11) return new MiyaBall(x,y,color, { });
-      if(t === 12) return new MachineGunBall(x,y,color, { });
+      if(t === 12) return new SamiBall(x,y,color, { });
+      if(t === 13) return new MachineGunBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
@@ -240,6 +243,9 @@ const critAudio = new Audio('/sound/critHit.mp3');
           // track hits for MiyaBall when it DEALS damage (not when it receives)
           if(B instanceof MiyaBall && rawBDamage > 0){ B.hitCount++; }
           if(A instanceof MiyaBall && rawADamage > 0){ A.hitCount++; }
+          // track hits for SamiBall when it DEALS damage (stacked short window)
+          if(B instanceof SamiBall && rawBDamage > 0){ if(typeof B.recordDeal === 'function') B.recordDeal(); }
+          if(A instanceof SamiBall && rawADamage > 0){ if(typeof A.recordDeal === 'function') A.recordDeal(); }
           // check for MiyaBall special attack trigger (5 hits MADE by attacker)
           if(B instanceof MiyaBall && B.hitCount >= B.hitThreshold){ 
             miyaAttacking = true; 
