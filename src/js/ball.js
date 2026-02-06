@@ -113,18 +113,6 @@ export class Ball {
       
       ctx.restore();
     }
-    // draw type name above the ball
-    if(this.typeName){
-      ctx.save();
-      ctx.font = '12px system-ui';
-      ctx.textAlign = 'center';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillStyle = '#fff';
-      const y = this.y - this.r - 8;
-      ctx.strokeText(this.typeName, this.x, y);
-      ctx.fillText(this.typeName, this.x, y);
-      ctx.restore();
-    }
+    // (type name drawing removed - name now shown only in HP UI)
   }
 }

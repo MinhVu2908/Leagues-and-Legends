@@ -9,7 +9,7 @@ import { FeatherBall } from './featherBall.js';
 import { MineBall } from './mineBall.js';
 import { RageBall } from './rageBall.js';
 import { TeleBall } from './teleBall.js';
-import { HoshimiMiyabi } from './hoshimiMiyabi.js';
+import { MiyaBall } from './miyaBall.js';
 import { HealingOrb } from './healingOrb.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -84,8 +84,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new HoshimiMiyabi(a.x, a.y, '#90caf9', {});
-      const ballB = new FeatherBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new MiyaBall(a.x, a.y, '#90caf9', {});
+      const ballB = new MiyaBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -96,7 +96,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*13); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: HoshimiMiyabi
+      const t = Math.floor(Math.random()*13); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: BoomerangBall, 12: MiyaBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -108,11 +108,16 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(t === 9) return new RageBall(x,y,color, { });
       if(t === 10) return new TeleBall(x,y,color, { });
       //if(t === 11) return new BoomerangBall(x,y,color, { });
-      if(t === 11) return new HoshimiMiyabi(x,y,color, { });
+      if(t === 11) return new MiyaBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
-    const ballB = makeRandom(b.x,b.y);
+    let ballB;
+    let typeTries = 0;
+    do{
+      ballB = makeRandom(b.x,b.y);
+      typeTries++;
+    } while(ballB && ballA && ballB.constructor === ballA.constructor && typeTries < 200);
     return [ballA, ballB];
   }
 
@@ -125,9 +130,9 @@ const critAudio = new Audio('/sound/critHit.mp3');
   let mines = [];
   // global boomerang projectiles
   let boomerangs = [];
-  // Hoshimi Miyabi special attack state
-  let hoshimiAttacking = false;
-  let hoshimiAttacker = null;
+  // MiyaBall special attack state
+  let miyaAttacking = false;
+  let miyaAttacker = null;
 
   let previouslyColliding = false;
   // healing orb management
@@ -220,19 +225,19 @@ const critAudio = new Audio('/sound/critHit.mp3');
           // record hits on RageBall when it receives damage (triggers rage mode)
           if(typeof A.recordHit === 'function' && rawBDamage > 0){ A.recordHit(); }
           if(typeof B.recordHit === 'function' && rawADamage > 0){ B.recordHit(); }
-          // track hits for HoshimiMiyabi when it DEALS damage (not when it receives)
-          if(B instanceof HoshimiMiyabi && rawBDamage > 0){ B.hitCount++; }
-          if(A instanceof HoshimiMiyabi && rawADamage > 0){ A.hitCount++; }
-          // check for HoshimiMiyabi special attack trigger (5 hits MADE by attacker)
-          if(B instanceof HoshimiMiyabi && B.hitCount >= B.hitThreshold){ 
-            hoshimiAttacking = true; 
-            hoshimiAttacker = B;
+          // track hits for MiyaBall when it DEALS damage (not when it receives)
+          if(B instanceof MiyaBall && rawBDamage > 0){ B.hitCount++; }
+          if(A instanceof MiyaBall && rawADamage > 0){ A.hitCount++; }
+          // check for MiyaBall special attack trigger (5 hits MADE by attacker)
+          if(B instanceof MiyaBall && B.hitCount >= B.hitThreshold){ 
+            miyaAttacking = true; 
+            miyaAttacker = B;
             B.startAttack(A);
             B.hitCount = 0; // reset hit counter for next attack
           }
-          if(A instanceof HoshimiMiyabi && A.hitCount >= A.hitThreshold){ 
-            hoshimiAttacking = true; 
-            hoshimiAttacker = A;
+          if(A instanceof MiyaBall && A.hitCount >= A.hitThreshold){ 
+            miyaAttacking = true; 
+            miyaAttacker = A;
             A.startAttack(B);
             A.hitCount = 0; // reset hit counter for next attack
           }
@@ -272,9 +277,9 @@ const critAudio = new Audio('/sound/critHit.mp3');
     ctx.clearRect(0,0,W,H);
     ctx.strokeStyle='#000'; ctx.lineWidth=6; ctx.strokeRect(2,2,W-4,H-4);
     
-    // Handle Hoshimi Miyabi special attack
-    if (hoshimiAttacking && hoshimiAttacker) {
-      const attacker = hoshimiAttacker;
+    // Handle MiyaBall special attack
+    if (miyaAttacking && miyaAttacker) {
+      const attacker = miyaAttacker;
       const defender = balls[0] === attacker ? balls[1] : balls[0];
       
       // Update attack animation and get damage instances
@@ -287,8 +292,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
       
       if (attackResult.finished) {
         // Attack finished
-        hoshimiAttacking = false;
-        hoshimiAttacker = null;
+        miyaAttacking = false;
+        miyaAttacker = null;
       }
       
       // Don't update balls normally during attack, but keep them frozen
