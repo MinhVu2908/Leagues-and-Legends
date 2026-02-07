@@ -13,6 +13,7 @@ import { MiyaBall } from './miyaBall.js';
 import { MachineGunBall } from './machineGunBall.js';
 import { SamiBall } from './samiBall.js';
 import { LuxiBall } from './luxiBall.js';
+import { CurveBall } from './curveBall.js';
 import { HealingOrb } from './healingOrb.js';
 import { TestBall } from './testBall.js';
 
@@ -91,13 +92,13 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = false;
+    const TEMP_SPAWN = true;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new LuxiBall(a.x, a.y, '#90caf9', {});
-      const ballB = new BigBall(b.x, b.y, '#a5d6a7', {});
+      const ballA = new CurveBall(a.x, a.y, '#90caf9', {});
+      const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
 
@@ -108,7 +109,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     function makeRandom(x,y){
       const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
       const color = colors[Math.floor(Math.random()*colors.length)];
-      const t = Math.floor(Math.random()*16); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: MiyaBall, 12: SamiBall, 13: LuxiBall, 14: MachineGunBall
+      const t = Math.floor(Math.random()*17); // 0: base Ball, 1: SmallBall, 2: BigBall, 3: PoisonBall, 4: SpikerBall, 5: IceBall, 6: StunBall, 7: FeatherBall, 8: MineBall, 9: RageBall, 10: TeleBall, 11: MiyaBall, 12: SamiBall, 13: LuxiBall, 14: MachineGunBall, 15: CurveBall
       if(t === 1) return new SmallBall(x,y,color, { });
       if(t === 2) return new BigBall(x,y,color, { });
       if(t === 3) return new PoisonBall(x,y,color, { });
@@ -124,6 +125,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(t === 12) return new SamiBall(x,y,color, { });
       if(t === 13) return new LuxiBall(x,y,color, { });
       if(t === 14) return new MachineGunBall(x,y,color, { });
+      if(t === 15) return new CurveBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
     const ballA = makeRandom(a.x,a.y);
