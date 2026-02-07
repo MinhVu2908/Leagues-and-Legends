@@ -92,7 +92,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
   function spawnTwo(){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
-    const TEMP_SPAWN = true;
+    const TEMP_SPAWN = false;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
