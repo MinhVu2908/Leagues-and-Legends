@@ -23,10 +23,19 @@
         <div class="combo-text" id="comboB-text"></div>
       </div>
     </div>
-    <canvas id="c" width="500" height="500"></canvas>
-    <div class="button-group">
-      <button id="reset">Reset Scene</button>
-      <a href="./ballShowcase.html" class="showcase-link">Balldex</a>
+    <div class="game-wrapper">
+      <div class="game-area">
+        <canvas id="c" width="500" height="500"></canvas>
+        <div class="button-group">
+          <button id="reset">Reset Scene</button>
+          <a href="./ballShowcase.html" class="showcase-link">Ball Guide</a>
+        </div>
+      </div>
+      <!-- Dev log sidebar (read-only for clients) -->
+      <aside class="dev-log">
+        <h2>Patch Log</h2>
+        <div id="devLogDisplay" class="dev-log-display" aria-live="polite"></div>
+      </aside>
     </div>
     <!-- Social links corner (visible but subtle) -->
     <div class="social-box" aria-hidden="false">
@@ -43,5 +52,31 @@
   </div>
 
   <script type="module" src="./src/js/main.js"></script>
+
+  <!-- Dev log display (read-only) -->
+  <script>
+    (function(){
+      const display = document.getElementById('devLogDisplay');
+      const entries = [
+        { date: '2026-02-06 v0.3', nerf: 'Spiker Ball spike spawn rate reduced', buff: 'Ice Ball slow duration extended', features: 'Added ball showcase with descriptions', new: 'Luxi Ball (laser spawner), Sami Ball (stacking burst)' },
+        { date: '2026-02-05 v0.2', nerf: 'Rage Ball rage duration decreased', buff: 'Miya Ball special attack damage +15%', features: 'Dev log system added', new: 'Miya Ball (combo attacker)' },
+        { date: '2026-02-04 v0.1', nerf: '', buff: '', features: 'Initial game release', new: 'All base ball types' }
+      ];
+      display.innerHTML = '';
+      entries.forEach(entry => {
+        const el = document.createElement('div'); el.className = 'dev-entry';
+        if(entry.date){ const h = document.createElement('div'); h.className = 'e-head'; h.textContent = entry.date; el.appendChild(h); }
+        ['nerf','buff','features','new'].forEach(k => {
+          if(entry[k]){
+            const sec = document.createElement('div'); sec.className = 'e-section';
+            const title = document.createElement('div'); title.className='e-title'; title.textContent = k.charAt(0).toUpperCase()+k.slice(1)+':';
+            const body = document.createElement('div'); body.className='e-body'; body.textContent = '• '+entry[k];
+            sec.appendChild(title); sec.appendChild(body); el.appendChild(sec);
+          }
+        });
+        display.appendChild(el);
+      });
+    })();
+  </script>
 </body>
 </html>

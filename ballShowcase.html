@@ -139,24 +139,6 @@
         </div>
 
       </div>
-
-      <!-- Dev log sidebar -->
-      <aside class="dev-log">
-        <h2>Dev Log</h2>
-        <form id="devLogForm" class="dev-log-form">
-          <input type="text" id="entryDate" placeholder="2026-02-06 v0.1" />
-          <textarea id="entryNerf" placeholder="Nerf:\n- ..." rows="3"></textarea>
-          <textarea id="entryBuff" placeholder="Buffs:\n- ..." rows="3"></textarea>
-          <textarea id="entryFeatures" placeholder="Features:\n- ..." rows="3"></textarea>
-          <textarea id="entryNew" placeholder="New ball:\n- ..." rows="2"></textarea>
-          <div class="form-row">
-            <button type="button" id="addEntryBtn">Add Entry</button>
-            <button type="button" id="clearLogBtn">Clear Log</button>
-          </div>
-        </form>
-
-        <div id="devLogList" class="dev-log-list" aria-live="polite"></div>
-      </aside>
     </main>
 
     <!-- Footer -->
@@ -165,48 +147,7 @@
     </footer>
   </div>
 
-  <script>
-    // Simple dev log using localStorage for convenience
-    (function(){
-      const KEY = 'ballShowcaseDevLogV1';
-      const addBtn = document.getElementById('addEntryBtn');
-      const clearBtn = document.getElementById('clearLogBtn');
-      const list = document.getElementById('devLogList');
-      function load(){ try{ return JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){ return []; } }
-      function save(data){ localStorage.setItem(KEY, JSON.stringify(data)); }
-      function render(){
-        const data = load(); list.innerHTML = '';
-        if(!data.length){ list.innerHTML = '<div class="empty">No dev entries yet.</div>'; return; }
-        data.slice().reverse().forEach(entry => {
-          const el = document.createElement('div'); el.className = 'dev-entry';
-          const h = document.createElement('div'); h.className = 'e-head'; h.textContent = entry.date || '';
-          el.appendChild(h);
-          ['nerf','buff','features','new'].forEach(k => {
-            if(entry[k]){
-              const sec = document.createElement('div'); sec.className = 'e-section';
-              const title = document.createElement('div'); title.className='e-title'; title.textContent = k.charAt(0).toUpperCase()+k.slice(1)+':';
-              const pre = document.createElement('pre'); pre.className='e-body'; pre.textContent = entry[k];
-              sec.appendChild(title); sec.appendChild(pre); el.appendChild(sec);
-            }
-          });
-          list.appendChild(el);
-        });
-      }
-      addBtn && addBtn.addEventListener('click', ()=>{
-        const date = document.getElementById('entryDate').value.trim();
-        const nerf = document.getElementById('entryNerf').value.trim();
-        const buff = document.getElementById('entryBuff').value.trim();
-        const features = document.getElementById('entryFeatures').value.trim();
-        const nball = document.getElementById('entryNew').value.trim();
-        if(!date && !nerf && !buff && !features && !nball) return;
-        const data = load(); data.push({ date, nerf, buff, features, new: nball, created: Date.now() }); save(data);
-        document.getElementById('entryNerf').value=''; document.getElementById('entryBuff').value=''; document.getElementById('entryFeatures').value=''; document.getElementById('entryNew').value='';
-        render();
-      });
-      clearBtn && clearBtn.addEventListener('click', ()=>{ if(confirm('Clear all dev log entries?')){ localStorage.removeItem(KEY); render(); } });
-      render();
-    })();
-  </script>
+
 
 </body>
 </html>
