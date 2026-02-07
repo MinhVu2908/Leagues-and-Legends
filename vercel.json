@@ -1,6 +1,6 @@
 {
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "^(?!.*\\.(html|js|css|json|png|jpg|svg|ico|wav|mp3)$)/(.*)", "destination": "/index.html" }
   ]
 }
