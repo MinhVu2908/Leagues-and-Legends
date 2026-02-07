@@ -97,7 +97,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
-      const ballA = new CurveBall(a.x, a.y, '#90caf9', {});
+      const ballA = new SmallBall(a.x, a.y, '#90caf9', {});
       const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }

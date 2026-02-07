@@ -4,7 +4,7 @@ export class CurveBall extends Ball {
   // CurveBall curves like a masse shot in billiards when it bounces
   // After hitting a wall, it applies a curved trajectory instead of straight bounce
   constructor(x, y, color, options = {}){
-    const defaults = { r: 34, speed: 11, hp: 1000, damage: 120, critChance: 0.13, curveStrength: 0.20 };
+    const defaults = { r: 34, speed: 11, hp: 1200, damage: 120, critChance: 0.13, curveStrength: 0.20 };
     super(x, y, color, Object.assign({}, defaults, options));
     this.curveStrength = options.curveStrength ?? defaults.curveStrength;
     this.typeName = 'Curve Ball';
