@@ -19,4 +19,18 @@ export class HealingOrb {
     ctx.strokeStyle = '#e8f5e9'; ctx.lineWidth = 3; ctx.stroke();
     ctx.restore();
   }
+
+  applyTo(ball, spawnDamage){
+    const total = this.healAmount || 100;
+    const duration = 5000; // 5 seconds
+    const ticks = 10;
+    const per = Math.ceil(total / ticks);
+    let done = 0;
+    const iv = setInterval(()=>{
+      if(!ball || !ball.alive){ clearInterval(iv); return; }
+      const heal = Math.min(per, ball.maxHp - ball.hp, total - done);
+      if(heal > 0){ ball.hp = Math.min(ball.maxHp, ball.hp + heal); if(typeof spawnDamage === 'function') spawnDamage(ball.x, ball.y - ball.r - 6, -heal); done += heal; }
+      if(done >= total) clearInterval(iv);
+    }, duration / ticks);
+  }
 }

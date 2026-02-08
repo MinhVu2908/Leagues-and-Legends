@@ -9,6 +9,10 @@ export class Ball {
     this.vy = Math.sin(a) * speed;
     this.maxHp = hp; this.hp = hp; this.damage = damage; this.alive = true;
     this.critChance = critChance;
+    this.damageMultiplier = 1;
+    this._damageBuffTimer = null;
+    this._speedBuffTimer = null;
+    this._sizeTimer = null;
     this.lastCrit = 0; // ms remaining for crit visual
     this.typeName = options.typeName || 'Normal Ball';
     this.slow = null; // active slow: { percent: 0.3, remaining: ms }
@@ -59,6 +63,29 @@ export class Ball {
     if(percent > this.slow.percent){ this.slow.percent = percent; this.slow.remaining = duration; return; }
     // otherwise refresh remaining to the larger of existing/new
     this.slow.remaining = Math.max(this.slow.remaining, duration);
+  }
+
+  applyDamageBuff(multiplier, duration){
+    if(!multiplier || multiplier <= 0 || !duration) return;
+    if(this._damageBuffTimer) clearTimeout(this._damageBuffTimer);
+    this.damageMultiplier = multiplier;
+    this._damageBuffTimer = setTimeout(()=>{ this.damageMultiplier = 1; this._damageBuffTimer = null; }, duration);
+  }
+
+  applySpeedBuff(multiplier, duration){
+    if(!multiplier || multiplier <= 0 || !duration) return;
+    if(this._speedBuffTimer) clearTimeout(this._speedBuffTimer);
+    // scale current velocity to reflect speed change
+    this.vx *= multiplier;
+    this.vy *= multiplier;
+    this._speedBuffTimer = setTimeout(()=>{ this.vx /= multiplier; this.vy /= multiplier; this._speedBuffTimer = null; }, duration);
+  }
+
+  applySizeChange(multiplier, duration){
+    if(!multiplier || multiplier <= 0 || !duration) return;
+    if(this._sizeTimer) clearTimeout(this._sizeTimer);
+    this.r *= multiplier;
+    this._sizeTimer = setTimeout(()=>{ this.r /= multiplier; this._sizeTimer = null; }, duration);
   }
 
   randomize(){ const ang = Math.atan2(this.vy,this.vx) + (Math.random()-0.5)*0.6; const mag = Math.hypot(this.vx,this.vy); this.vx = Math.cos(ang)*mag; this.vy = Math.sin(ang)*mag; }

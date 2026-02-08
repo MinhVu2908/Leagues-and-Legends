@@ -15,6 +15,9 @@ import { SamiBall } from './samiBall.js';
 import { LuxiBall } from './luxiBall.js';
 import { CurveBall } from './curveBall.js';
 import { HealingOrb } from './healingOrb.js';
+import { DamageOrb } from './damageOrb.js';
+import { SpeedOrb } from './speedOrb.js';
+import { SizeOrb } from './sizeOrb.js';
 import { TestBall } from './testBall.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -96,7 +99,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
-      // Change these types as needed: Ball, SmallBall, BigBall, PoisonBall, SpikerBall, IceBall
+      // TEMPORARY: test Ball
       const ballA = new SmallBall(a.x, a.y, '#90caf9', {});
       const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
@@ -162,7 +165,13 @@ const critAudio = new Audio('/sound/critHit.mp3');
     const padding = 24;
     const x = padding + Math.random()*(W-2*padding);
     const y = padding + Math.random()*(H-2*padding);
-    orb = new HealingOrb(x,y, 300, 14);
+    // pick random orb type: 0=healing,1=damage buff,2=speed buff,3=size up,4=size down
+    const t = Math.floor(Math.random()*5);
+    if(t === 0) orb = new HealingOrb(x,y, 300, 14);
+    else if(t === 1) orb = new DamageOrb(x,y, 1.6, 14, 5000);
+    else if(t === 2) orb = new SpeedOrb(x,y, 1.6, 14, 5000);
+    else if(t === 3) orb = new SizeOrb(x,y, 1.5, 14, 5000);
+    else orb = new SizeOrb(x,y, 0.7, 14, 5000);
   }
   spawnOrb();
 
@@ -221,8 +230,8 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
           const bCrit = Math.random() < (B.critChance || 0);
           const aCrit = Math.random() < (A.critChance || 0);
-          const rawBDamage = bIsStunned ? 0 : Math.round(B.damage * (bCrit ? 2 : 1));
-          const rawADamage = aIsStunned ? 0 : Math.round(A.damage * (aCrit ? 2 : 1));
+          const rawBDamage = bIsStunned ? 0 : Math.round(B.damage * (B.damageMultiplier || 1) * (bCrit ? 2 : 1));
+          const rawADamage = aIsStunned ? 0 : Math.round(A.damage * (A.damageMultiplier || 1) * (aCrit ? 2 : 1));
 
           // apply damage through centralized helper (handles one-time vulnerability multiplier)
           applyDamageTo(A, rawBDamage, bCrit, false, B);
@@ -286,8 +295,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(!b.alive) continue;
       const d = dist(b.x,b.y,orb.x,orb.y);
       if(d <= b.r + orb.r){
-        const heal = Math.min(orb.healAmount, b.maxHp - b.hp);
-        if(heal > 0){ b.hp += heal; spawnDamage(b.x, b.y - b.r - 6, -heal); }
+        if(typeof orb.applyTo === 'function') orb.applyTo(b, spawnDamage);
         orb.alive = false;
         // respawn orb after random delay
         setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
