@@ -2,6 +2,10 @@ html,body{height:100%;margin:0;display:flex;align-items:center;justify-content:c
 #container{display:flex;flex-direction:column;align-items:center}
 .game-wrapper{display:flex;gap:16px;align-items:flex-start}
 .game-area{display:flex;flex-direction:column;align-items:center}
+/* Left panel (betting area) placed to the left of the fight box */
+.left-panel{width:260px;display:flex;flex-direction:column;gap:12px;align-items:center;align-self:flex-start}
+.left-panel .betting-ui{width:100%}
+.left-panel .bet-result-ui{width:100%}
 canvas{background:#222;border:4px solid #000;display:block}
 .button-group{display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap;justify-content:center}
 #reset{padding:8px 12px;font-size:16px;cursor:pointer;background:#4caf50;color:#fff;border:none;border-radius:6px;font-weight:bold;transition:all 200ms ease}
@@ -50,9 +54,72 @@ canvas{background:#222;border:4px solid #000;display:block}
 .dev-log-display::-webkit-scrollbar-thumb{background:#555;border-radius:3px}
 .dev-log-display::-webkit-scrollbar-thumb:hover{background:#777}
 
+/* Profile Header */
+.profile-header{display:flex;gap:16px;align-items:center;margin-bottom:16px;justify-content:center}
+.profile-btn{background:#6c5ce7;border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;transition:all 200ms ease;box-shadow:0 4px 8px rgba(0,0,0,0.3)}
+.profile-btn:hover{background:#5f3dc4;transform:scale(1.1);box-shadow:0 6px 12px rgba(0,0,0,0.4)}
+.profile-avatar{display:inline-block}
+.coins-display{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);padding:8px 16px;border-radius:20px;border:2px solid #ffd54f;font-weight:bold;color:#ffd54f;font-size:18px}
+.coins-icon{font-size:20px}
+#coins-amount{min-width:60px;text-align:right}
+
+/* Profile Modal */
+.profile-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px);opacity:1;transition:opacity 200ms ease}
+.profile-modal.hidden{display:none;opacity:0}
+.profile-modal-content{background:#222;border:2px solid #6c5ce7;border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);position:relative;animation:modalSlideIn 300ms ease}
+@keyframes modalSlideIn{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+.profile-modal-content h2{margin-top:0;color:#6c5ce7;text-align:center;font-size:24px}
+.profile-info{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+.profile-stat{display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(108,92,231,0.1);border-radius:8px;border-left:3px solid #6c5ce7}
+.profile-stat label{color:#aaa;font-weight:600;font-size:14px}
+.profile-stat span{color:#fff;font-size:18px;font-weight:bold}
+.profile-modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:28px;cursor:pointer;color:#aaa;transition:color 200ms ease}
+.profile-modal-close:hover{color:#fff}
+
+/* Betting UI */
+.betting-ui{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:12px;padding:12px;background:rgba(0,0,0,0.4);border:2px solid #ffd54f;border-radius:8px}
+.betting-ui.hidden{display:none}
+.bet-instruction{color:#ffd54f;font-size:14px;font-weight:bold;text-align:center}
+.bet-custom-section{display:flex;flex-direction:column;gap:8px;width:100%;align-items:center}
+.bet-custom-section label{color:#ffd54f;font-size:12px;font-weight:bold}
+.bet-custom-section input{padding:6px 8px;border:1px solid #ffd54f;border-radius:4px;background:#111;color:#fff;font-size:14px;width:100%;box-sizing:border-box}
+.bet-custom-section input::placeholder{color:#777}
+.bet-quick-amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.bet-quick-btn{padding:6px 8px;border:1px solid #ffd54f;border-radius:4px;background:#111;color:#ffd54f;cursor:pointer;font-size:12px;font-weight:bold;transition:all 200ms ease}
+.bet-quick-btn:hover{background:#ffd54f;color:#111}
+.bet-custom-buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%}
+.bet-btn{padding:10px 12px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px;transition:all 200ms ease;color:#fff}
+.bet-btn.bet-ball-a{background:linear-gradient(135deg,#4fc3f7,#0288d1)}
+.bet-btn.bet-ball-a:hover{background:linear-gradient(135deg,#29b6f6,#0277bd);transform:translateY(-2px);box-shadow:0 4px 8px rgba(2,120,206,0.4)}
+.bet-btn.bet-ball-b{background:linear-gradient(135deg,#f06292,#c2185b)}
+.bet-btn.bet-ball-b:hover{background:linear-gradient(135deg,#ec407a,#ad1457);transform:translateY(-2px);box-shadow:0 4px 8px rgba(193,24,91,0.4)}
+.bet-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+/* Winner announcement */
+.winner-ui{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:12px;padding:12px;background:rgba(76,175,80,0.1);border:2px solid #4caf50;border-radius:8px;text-align:center}
+.winner-ui.hidden{display:none}
+.winner-text{color:#4caf50;font-size:16px;font-weight:bold}
+
+/* Bet history log */
+.bet-history-log{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding:12px;background:rgba(0,0,0,0.3);border:1px solid #444;border-radius:8px;max-height:300px;overflow-y:auto}
+.bet-history-log h3{margin:0 0 8px 0;color:#90caf9;font-size:13px;text-align:center}
+.history-entries{display:flex;flex-direction:column;gap:6px}
+.history-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:4px;font-size:11px;border-left:3px solid transparent}
+.history-entry.win{background:rgba(76,175,80,0.15);border-left-color:#4caf50;color:#b9f6ca}
+.history-entry.loss{background:rgba(244,67,54,0.15);border-left-color:#f44336;color:#ffcdd2}
+.history-entry-amount{font-weight:bold}
+
+/* Bet Result UI */
+.bet-result-ui{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:12px;padding:12px;background:rgba(0,0,0,0.4);border:2px solid #4caf50;border-radius:8px;text-align:center}
+.bet-result-ui.hidden{display:none}
+.bet-result-message{color:#fff;font-size:14px;font-weight:bold}
+.bet-result-coins{color:#4caf50;font-size:18px;font-weight:bold}
+.bet-result-coins.loss{color:#f44336}
+
 @media (max-width:900px){
 	/* Stack the game and dev-log for narrow screens */
 	.game-wrapper{flex-direction:column;gap:12px;align-items:center}
+	.left-panel{width:100%;align-self:stretch}
 	.dev-log{width:calc(100% - 8px);max-width:720px;max-height:240px;overflow:auto}
 	#container{padding:10px}
 	canvas{width:calc(92vw - 20px);max-width:500px;height:auto;aspect-ratio:1 / 1;border-width:3px}

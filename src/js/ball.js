@@ -1,7 +1,7 @@
 export class Ball {
   // options: { r, speed, hp, damage }
   constructor(x, y, color, options = {}){
-    const { r = 36, speed = 12, hp = 100, damage = 20, critChance = 0.12 } = options;
+    const { r = 36, speed = 12, hp = 1000, damage = 200, critChance = 0.12 } = options;
     this.x = x; this.y = y; this.color = color;
     this.r = r;
     const a = Math.random() * Math.PI * 2;

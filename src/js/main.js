@@ -19,23 +19,294 @@ import { DamageOrb } from './damageOrb.js';
 import { SpeedOrb } from './speedOrb.js';
 import { SizeOrb } from './sizeOrb.js';
 import { TestBall } from './testBall.js';
+import { PlayerSystem } from './playerSystem.js';
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const canvas = document.getElementById('c');
+  if (!canvas) {
+    console.error('Canvas element (#c) not found. Cannot start game.');
+    return;
+  }
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
   const R = 36;
   const SPEED = 12.0;
 
+  // Initialize Player System
+  const playerSystem = new PlayerSystem();
+  
   // UI elements for HP
   const hpAfill = document.getElementById('hpA-fill');
   const hpBfill = document.getElementById('hpB-fill');
   const hpAtext = document.getElementById('hpA-text');
   const hpBtext = document.getElementById('hpB-text');
-  const comboAtext = document.getElementById('comboA-text');
-  const comboBtext = document.getElementById('comboB-text');
+  const comboAtext = document.getElementById('comboA-text') || null;
+  const comboBtext = document.getElementById('comboB-text') || null;
   const countdownEl = document.getElementById('countdown');
+
+  // UI elements for coins and betting
+  const coinsAmount = document.getElementById('coins-amount');
+  const bettingUi = document.getElementById('betting-ui');
+  const betResultUi = document.getElementById('bet-result-ui');
+  const betResultMessage = document.getElementById('bet-result-message');
+  const betResultCoins = document.getElementById('bet-result-coins');
+  const betAmountInput = document.getElementById('bet-amount-input');
+  const betOnABtn = document.getElementById('bet-on-a');
+  const betOnBBtn = document.getElementById('bet-on-b');
+  const winnerUi = document.getElementById('winner-ui');
+  const winnerText = document.getElementById('winner-text');
+  const profileBtn = document.getElementById('profile-btn');
+  const profileModal = document.getElementById('profile-modal');
+  const profileName = document.getElementById('profile-name');
+  const profileCoins = document.getElementById('profile-coins');
+  const profileModalClose = document.querySelector('.profile-modal-close');
+  const historyEntries = document.getElementById('history-entries');
+  
+  // Inline confirmation/warning container (will be injected into the betting UI)
+  let inlineConfirmEl = null;
+  function ensureInlineConfirm(){
+    if (!bettingUi) return null;
+    if (!inlineConfirmEl){
+      inlineConfirmEl = document.createElement('div');
+      inlineConfirmEl.id = 'inline-bet-confirm';
+      inlineConfirmEl.className = 'inline-bet-confirm hidden';
+      bettingUi.appendChild(inlineConfirmEl);
+    }
+    return inlineConfirmEl;
+  }
+  // Helper to show a short inline message under the betting box
+  function showInlineMessage(text, type = 'info'){
+    if (!bettingUi) return;
+    let msg = bettingUi.querySelector('#bet-warning');
+    if (!msg){
+      msg = document.createElement('div');
+      msg.id = 'bet-warning';
+      msg.className = 'bet-warning';
+      bettingUi.appendChild(msg);
+    }
+    msg.textContent = text;
+    msg.dataset.type = type;
+    // auto-clear after 4s for non-error messages
+    if (type !== 'error') setTimeout(()=>{ if(msg) msg.textContent = ''; }, 4000);
+  }
+  const chatInput = document.getElementById('chat-input');
+  const chatMessages = document.getElementById('chat-messages');
+  
+  // Pending bet data (waiting for confirmation)
+  let pendingBet = { ballIndex: null, amount: 0 };
+
+  // Track if betting is locked (during active fight)
+  let bettingLocked = false;
+
+  // Update coins display
+  function updateCoinsDisplay() {
+    const currentCoins = playerSystem.getCoins();
+    console.log(`📊 Updating UI to show ${currentCoins} coins`);
+    if (coinsAmount) {
+      coinsAmount.textContent = currentCoins;
+      console.log(`  ✓ Updated #coins-amount element`);
+    }
+    const coinsMini = document.getElementById('coins-amount-mini');
+    if (coinsMini) {
+      coinsMini.textContent = currentCoins;
+      console.log(`  ✓ Updated #coins-amount-mini element`);
+    }
+  }
+  
+  // Add entry to bet history
+  function addHistoryEntry(betAmount, isWin, coinsChanged) {
+    if (!historyEntries) return; // Guard against missing element
+    const entryEl = document.createElement('div');
+    
+    let resultText, changeText, className;
+    if (isWin === null) {
+      // Draw
+      className = 'history-entry draw';
+      resultText = '⚔️ Draw';
+      changeText = `±0`;
+    } else {
+      // Win or Loss
+      className = `history-entry ${isWin ? 'win' : 'loss'}`;
+      resultText = isWin ? '✓ Win' : '✗ Loss';
+      changeText = isWin ? `+${coinsChanged}` : `-${coinsChanged}`;
+    }
+    
+    entryEl.className = className;
+    entryEl.innerHTML = `
+      <span>Bet ${betAmount} (${resultText})</span>
+      <span class="history-entry-amount">${changeText}</span>
+    `;
+    historyEntries.insertBefore(entryEl, historyEntries.firstChild);
+    
+    // Keep only last 20 entries
+    while (historyEntries.children.length > 20) {
+      historyEntries.removeChild(historyEntries.lastChild);
+    }
+  }
+  
+  // On page load: sync coins from localStorage and display
+  console.log('🎮 Game initializing...');
+  console.log(`Initial coins in memory: ${playerSystem.getCoins()}`);
+  
+  // Small delay to ensure DOM is fully rendered before updating
+  setTimeout(() => {
+    updateCoinsDisplay();
+    console.log('✅ Initial coin display synced');
+  }, 10);
+  
+  // Save coins to localStorage whenever page might unload
+  window.addEventListener('beforeunload', () => {
+    playerSystem.save();
+  });
+  
+  // Initialize betting UI state (hidden at start, locked during fights)
+  bettingLocked = true;
+  if (bettingUi) bettingUi.classList.add('hidden');
+  if (betResultUi) betResultUi.classList.add('hidden');
+  if (winnerUi) winnerUi.classList.add('hidden');
+
+  // Profile modal handlers
+  if (profileBtn) {
+    profileBtn.addEventListener('click', () => {
+      if (profileModal) profileModal.classList.remove('hidden');
+      if (profileName) profileName.textContent = playerSystem.getPlayerName();
+      if (profileCoins) profileCoins.textContent = playerSystem.getCoins();
+    });
+  }
+  if (profileModalClose) {
+    profileModalClose.addEventListener('click', () => {
+      if (profileModal) profileModal.classList.add('hidden');
+    });
+  }
+  if (profileModal) {
+    profileModal.addEventListener('click', (e) => {
+      if (e.target === profileModal) {
+        profileModal.classList.add('hidden');
+      }
+    });
+  }
+
+  // Quick amount button handlers
+  const quickBtns = document.querySelectorAll('.bet-quick-btn');
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (betAmountInput) betAmountInput.value = e.target.dataset.amount;
+    });
+  });
+
+  // Custom bet button handlers - show confirmation modal instead of placing bet directly
+  function showBetConfirmation(ballIndex) {
+    if (bettingLocked) {
+      // show inline warning instead of alert
+      showInlineMessage('Betting is locked during an active fight. Wait for the prepare timer.', 'error');
+      return;
+    }
+    
+    if (!betAmountInput) {
+      alert('Betting interface not available');
+      return;
+    }
+    
+    const amount = parseInt(betAmountInput.value) || 0;
+    if (amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    
+    // Show inline confirmation inside betting UI
+    pendingBet = { ballIndex, amount };
+    const el = ensureInlineConfirm();
+    if (!el) return;
+    const teamName = ballIndex === 0 ? 'Ball A' : 'Ball B';
+    el.innerHTML = `
+      <div class="confirm-row">Confirm bet <strong>${amount}</strong> on <span class="confirm-team" style="color:${ballIndex===0? '#4fc3f7':'#f06292'}">${teamName}</span>?</div>
+      <div class="confirm-actions">
+        <button class="confirm-yes">Confirm</button>
+        <button class="confirm-no">Cancel</button>
+      </div>
+    `;
+    el.classList.remove('hidden');
+    const yes = el.querySelector('.confirm-yes');
+    const no = el.querySelector('.confirm-no');
+    if (yes) yes.addEventListener('click', ()=>{ finalizeBet(); el.classList.add('hidden'); el.innerHTML = ''; });
+    if (no) no.addEventListener('click', ()=>{ cancelBetConfirmation(); el.classList.add('hidden'); el.innerHTML = ''; });
+  }
+  
+  // Actually place the bet (called when user clicks Confirm in modal)
+  function finalizeBet() {
+    if (pendingBet.ballIndex === null) return;
+    
+    const { ballIndex, amount } = pendingBet;
+    const result = playerSystem.placeBet(ballIndex, amount);
+    
+    if (result.success) {
+      // Lock betting immediately
+      bettingLocked = true;
+      
+      // Hide betting UI
+      if (bettingUi) bettingUi.classList.add('hidden');
+      updateCoinsDisplay();
+      
+      // Add message to chat
+      const teamName = ballIndex === 0 ? 'Ball A' : 'Ball B';
+      addChatMessage(`You bet ${amount} coins on ${teamName} 🎲`, 'bet');
+      
+      console.log(result.message);
+      pendingBet = { ballIndex: null, amount: 0 };
+    } else {
+      alert(result.message);
+      pendingBet = { ballIndex: null, amount: 0 };
+    }
+    
+    // Hide any inline confirmation if present
+    const el = inlineConfirmEl || (bettingUi && bettingUi.querySelector('#inline-bet-confirm'));
+    if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+  }
+  
+  // Cancel bet confirmation
+  function cancelBetConfirmation() {
+    pendingBet = { ballIndex: null, amount: 0 };
+    const el = inlineConfirmEl || (bettingUi && bettingUi.querySelector('#inline-bet-confirm'));
+    if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+  }
+  
+  // Chat system
+  function addChatMessage(message, type = 'chat') {
+    if (!chatMessages) return;
+    
+    const msgEl = document.createElement('div');
+    msgEl.style.marginBottom = '6px';
+    msgEl.style.padding = '6px';
+    msgEl.style.borderRadius = '4px';
+    
+    if (type === 'bet') {
+      msgEl.style.background = 'rgba(255, 213, 79, 0.15)';
+      msgEl.style.color = '#ffd54f';
+      msgEl.style.borderLeft = '3px solid #ffd54f';
+    } else if (type === 'win') {
+      msgEl.style.background = 'rgba(76, 175, 80, 0.15)';
+      msgEl.style.color = '#b9f6ca';
+      msgEl.style.borderLeft = '3px solid #4caf50';
+    } else if (type === 'loss') {
+      msgEl.style.background = 'rgba(244, 67, 54, 0.15)';
+      msgEl.style.color = '#ffcdd2';
+      msgEl.style.borderLeft = '3px solid #f44336';
+    } else if (type === 'draw') {
+      msgEl.style.background = 'rgba(156, 39, 176, 0.15)';
+      msgEl.style.color = '#ce93d8';
+      msgEl.style.borderLeft = '3px solid #9c27b0';
+    } else {
+      msgEl.style.color = '#ccc';
+    }
+    
+    msgEl.textContent = message;
+    chatMessages.appendChild(msgEl);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  if (betOnABtn) betOnABtn.addEventListener('click', () => showBetConfirmation(0));
+  if (betOnBBtn) betOnBBtn.addEventListener('click', () => showBetConfirmation(1));
 
   function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); }
 
@@ -60,10 +331,31 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 
-const hitAudio = new Audio('/sound/hit.mp3');
-const critAudio = new Audio('/sound/critHit.mp3');
-  hitAudio.volume = 0.46;
-  critAudio.volume = 0.46;
+// audio files are stored under /public/sound in this project
+const hitAudio = new Audio('/public/sound/hit.mp3');
+const critAudio = new Audio('/public/sound/critHit.mp3');
+hitAudio.preload = 'auto';
+critAudio.preload = 'auto';
+hitAudio.volume = 0.46;
+critAudio.volume = 0.46;
+
+// Many browsers block audio.play() until a user gesture occurs.
+// Unlock audio on first user interaction by attempting a short play/pause.
+function unlockAudioOnGesture(){
+  try{
+    // Attempt to play and immediately pause to satisfy autoplay policies
+    hitAudio.currentTime = 0;
+    critAudio.currentTime = 0;
+    const p1 = hitAudio.play().catch(()=>{});
+    const p2 = critAudio.play().catch(()=>{});
+    Promise.all([p1,p2]).then(() => {
+      try{ hitAudio.pause(); critAudio.pause(); } catch(e){}
+      console.log('🔊 Audio unlocked by user gesture');
+    }).catch(()=>{});
+  } catch(e) { /* ignore */ }
+}
+document.addEventListener('pointerdown', unlockAudioOnGesture, { once: true });
+document.addEventListener('keydown', unlockAudioOnGesture, { once: true });
 
   // centralized damage applier: applies vulnerability multiplier once if present, updates HP, shows popup
   function applyDamageTo(target, amount, isCrit=false, isPoison=false, attacker=null){
@@ -93,14 +385,25 @@ const critAudio = new Audio('/sound/critHit.mp3');
   // Ball is defined in ./ball.js and imported above. The Ball API used here:
   // new Ball(x,y,color, { r, speed, hp, damage })
 
-  function spawnTwo(){
+  // Map ball type names to constructor functions
+  function getBallConstructor(typeName){
+    const map = {
+      'Ball': Ball, 'SmallBall': SmallBall, 'BigBall': BigBall, 'PoisonBall': PoisonBall,
+      'SpikerBall': SpikerBall, 'IceBall': IceBall, 'StunBall': StunBall, 'FeatherBall': FeatherBall,
+      'MineBall': MineBall, 'RageBall': RageBall, 'TeleBall': TeleBall, 'MiyaBall': MiyaBall,
+      'SamiBall': SamiBall, 'LuxiBall': LuxiBall, 'MachineGunBall': MachineGunBall, 'CurveBall': CurveBall
+    };
+    return map[typeName] || Ball;
+  }
+
+  function spawnTwo(forcedTypeA, forcedTypeB){
     // TEMPORARY: spawn specific balls for testing — set TEMP_SPAWN = false to revert to random
     const TEMP_SPAWN = false;
     if(TEMP_SPAWN){
       const a = {x: R + 60, y: H/2};
       const b = {x: W - R - 60, y: H/2};
       // TEMPORARY: test Ball
-      const ballA = new SmallBall(a.x, a.y, '#90caf9', {});
+      const ballA = new RageBall(a.x, a.y, '#90caf9', {});
       const ballB = new TestBall(b.x, b.y, '#a5d6a7', {});
       return [ballA, ballB];
     }
@@ -131,13 +434,27 @@ const critAudio = new Audio('/sound/critHit.mp3');
       if(t === 15) return new CurveBall(x,y,color, { });
       return new Ball(x,y,color, { r: R, speed: SPEED, hp: 1200, damage: 100 });
     }
-    const ballA = makeRandom(a.x,a.y);
-    let ballB;
-    let typeTries = 0;
-    do{
-      ballB = makeRandom(b.x,b.y);
-      typeTries++;
-    } while(ballB && ballA && ballB.constructor === ballA.constructor && typeTries < 200);
+    
+    function makeByType(typeName, x, y){
+      const colors = ['#4fc3f7','#f06292','#ffd54f','#90caf9','#a5d6a7'];
+      const color = colors[Math.floor(Math.random()*colors.length)];
+      const Constructor = getBallConstructor(typeName);
+      return new Constructor(x, y, color, {});
+    }
+    
+    // Use forced types if provided, otherwise use random
+    let ballA, ballB;
+    if(forcedTypeA && forcedTypeB){
+      ballA = makeByType(forcedTypeA, a.x, a.y);
+      ballB = makeByType(forcedTypeB, b.x, b.y);
+    } else {
+      ballA = makeRandom(a.x,a.y);
+      let typeTries = 0;
+      do{
+        ballB = makeRandom(b.x,b.y);
+        typeTries++;
+      } while(ballB && ballA && ballB.constructor === ballA.constructor && typeTries < 200);
+    }
     return [ballA, ballB];
   }
 
@@ -178,7 +495,31 @@ const critAudio = new Audio('/sound/critHit.mp3');
   // respawn / match management
   let respawnActive = false;
   let respawnMs = 0;
-  const RESPAWN_DELAY = 3000; // ms
+  const RESPAWN_DELAY = 10000; // ms
+  
+  // Store next fight ball type names for announcement
+  let nextBallTypeNameA = 'Ball';
+  let nextBallTypeNameB = 'Ball';
+  
+  // Generate and determine what the next fight balls will be (without spawning them yet)
+  function generateNextFightNames(){
+    const ballTypes = [
+      'Ball', 'SmallBall', 'BigBall', 'PoisonBall', 'SpikerBall', 'IceBall', 'StunBall', 
+      'FeatherBall', 'MineBall', 'RageBall', 'TeleBall', 'MiyaBall', 'SamiBall', 'LuxiBall', 
+      'MachineGunBall', 'CurveBall'
+    ];
+    const getRandomBallType = () => ballTypes[Math.floor(Math.random() * ballTypes.length)];
+    
+    nextBallTypeNameA = getRandomBallType();
+    nextBallTypeNameB = getRandomBallType();
+    
+    // Ensure they're different types
+    let tries = 0;
+    while(nextBallTypeNameA === nextBallTypeNameB && tries < 50){
+      nextBallTypeNameB = getRandomBallType();
+      tries++;
+    }
+  }
 
   function fightEnded(){
     const alive = balls.filter(b => b.alive).length;
@@ -186,6 +527,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
   }
 
   function startRespawn(){
+    generateNextFightNames(); // Pre-generate the next fight ball types
     respawnActive = true; respawnMs = RESPAWN_DELAY; updateCountdownUI();
   }
 
@@ -194,9 +536,10 @@ const critAudio = new Audio('/sound/critHit.mp3');
   }
 
   function updateCountdownUI(){
-    if(!respawnActive){ countdownEl.textContent = ''; return; }
+    if(!respawnActive){ if (countdownEl) countdownEl.textContent = ''; return; }
     const s = Math.ceil(respawnMs/1000);
-    countdownEl.textContent = `Next fight in: ${s}`;
+    // Display the NEXT fight names (pre-generated), not the current fight
+    if (countdownEl) countdownEl.textContent = `Next Fight: ${nextBallTypeNameA} vs ${nextBallTypeNameB} - ${s}s`;
   }
   function resolve(){
     const A = balls[0], B = balls[1]; const d = dist(A.x,A.y,B.x,B.y);
@@ -298,7 +641,7 @@ const critAudio = new Audio('/sound/critHit.mp3');
         if(typeof orb.applyTo === 'function') orb.applyTo(b, spawnDamage);
         orb.alive = false;
         // respawn orb after random delay
-        setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*4000);
+        setTimeout(()=>{ spawnOrb(); }, 2000 + Math.random()*400000);
         break;
       }
     }
@@ -420,13 +763,77 @@ const critAudio = new Audio('/sound/critHit.mp3');
 
     // respawn handling: if fight ended, start respawn timer; when timer finishes, spawn new pair
     if(fightEnded()){
-      if(!respawnActive) startRespawn();
+      if(!respawnActive) {
+        // Check for draw (both balls dead)
+        const aliveCount = balls.filter(b => b.alive).length;
+        const isDraw = aliveCount === 0;
+        
+        if (isDraw) {
+          // DRAW: Both balls died at same time
+          if (winnerText) winnerText.textContent = `⚔️ It's a Draw!`;
+          if (winnerUi) winnerUi.classList.remove('hidden');
+          
+          // Refund bet without loss
+          if (playerSystem.hasActiveBet()) {
+            const betAmount = playerSystem.getCurrentBet();
+            playerSystem.clearBet(); // Refund bet
+            addHistoryEntry(betAmount, null, 0); // Neutral history entry
+            addChatMessage(`⚔️ Draw! Your bet of ${betAmount} coins was refunded. 🔄`, 'draw');
+            updateCoinsDisplay();
+          }
+        } else {
+          // NORMAL: One ball alive
+          const winner = balls[0].alive ? 0 : 1;
+          const winnerName = balls[winner].typeName;
+          if (winnerText) winnerText.textContent = `🏆 ${winnerName} Wins!`;
+          if (winnerUi) winnerUi.classList.remove('hidden');
+          
+          // Resolve bet when fight ends
+          if(playerSystem.hasActiveBet()){
+            // Determine winner (which ball is alive)
+            const winnerIndex = balls[0].alive ? 0 : 1;
+            const winnerName = balls[winnerIndex].typeName || 'Ball';
+            const betResult = playerSystem.resolveBet(winnerIndex);
+            
+            // Add to history
+            addHistoryEntry(betResult.betAmount, betResult.isWin, betResult.isWin ? betResult.coinsGained : betResult.betAmount);
+            
+            // Add to chat
+            if (betResult.isWin) {
+              addChatMessage(`✓ ${winnerName} won! You won ${betResult.coinsGained} coins! 🎉`, 'win');
+            } else {
+              addChatMessage(`✗ ${winnerName} won. You lost ${betResult.betAmount} coins. 😢`, 'loss');
+            }
+            
+            // Show bet result UI
+            if (betResultMessage) betResultMessage.textContent = betResult.message;
+            if (betResultCoins) {
+              if (betResult.isWin) {
+                betResultCoins.textContent = `+${betResult.coinsGained} 🪙`;
+                betResultCoins.classList.remove('loss');
+              } else {
+                betResultCoins.textContent = `-${betResult.betAmount} 🪙`;
+                betResultCoins.classList.add('loss');
+              }
+            }
+            if (betResultUi) betResultUi.classList.remove('hidden');
+            updateCoinsDisplay();
+          } else {
+            // No bet was placed
+            if (betResultUi) betResultUi.classList.add('hidden');
+          }
+        }
+        
+        // Unlock betting for respawn period
+        bettingLocked = false;
+        startRespawn();
+      }
     }
     if(respawnActive){
       respawnMs -= nowDt;
       if(respawnMs <= 0){
-        // respawn new fight
-        balls = spawnTwo();
+        // respawn new fight with the announced ball types
+        balls = spawnTwo(nextBallTypeNameA, nextBallTypeNameB);
         for(const b of balls){ b.combo = 0; }
         damagePopups.length = 0;
         spikes.length = 0;
@@ -438,8 +845,22 @@ const critAudio = new Audio('/sound/critHit.mp3');
         previouslyColliding = false;
         cancelRespawn();
         updateHPUI();
+        
+        // Lock betting now that fight has started
+        bettingLocked = true;
+        // Hide betting UI and winner announcement
+        if (bettingUi) bettingUi.classList.add('hidden');
+        if (betResultUi) betResultUi.classList.add('hidden');
+        if (winnerUi) winnerUi.classList.add('hidden');
+        
+        // Clear bet input
+        if (betAmountInput) betAmountInput.value = '';
       } else {
         updateCountdownUI();
+        // Show betting UI during respawn timer (if not already bet)
+        if (!playerSystem.hasActiveBet()) {
+          if (bettingUi) bettingUi.classList.remove('hidden');
+        }
       }
     }
   }
@@ -448,23 +869,48 @@ const critAudio = new Audio('/sound/critHit.mp3');
     const A = balls[0], B = balls[1];
     const aPct = Math.max(0, Math.min(1, A.hp / A.maxHp));
     const bPct = Math.max(0, Math.min(1, B.hp / B.maxHp));
-    hpAfill.style.width = `${aPct*100}%`;
-    hpBfill.style.width = `${bPct*100}%`;
+    if (hpAfill) hpAfill.style.width = `${aPct*100}%`;
+    if (hpBfill) hpBfill.style.width = `${bPct*100}%`;
     // include type name and color the text using the ball's color
-    hpAtext.textContent = `${A.typeName} — ${Math.round(A.hp)} / ${A.maxHp}`;
-    hpBtext.textContent = `${B.typeName} — ${Math.round(B.hp)} / ${B.maxHp}`;
-    hpAtext.style.color = A.color;
-    hpBtext.style.color = B.color;
+    if (hpAtext) {
+      hpAtext.textContent = `${A.typeName} — ${Math.round(A.hp)} / ${A.maxHp}`;
+      hpAtext.style.color = A.color;
+    }
+    if (hpBtext) {
+      hpBtext.textContent = `${B.typeName} — ${Math.round(B.hp)} / ${B.maxHp}`;
+      hpBtext.style.color = B.color;
+    }
     // display combo counters
-    comboAtext.textContent = A.combo ? `Combo: ${A.combo}` : '';
-    comboBtext.textContent = B.combo ? `Combo: ${B.combo}` : '';
+    if (comboAtext) comboAtext.textContent = A.combo ? `Combo: ${A.combo}` : '';
+    if (comboBtext) comboBtext.textContent = B.combo ? `Combo: ${B.combo}` : '';
     // color shift: green -> orange -> red
-    hpAfill.style.background = aPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (aPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
-    hpBfill.style.background = bPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (bPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
+    if (hpAfill) hpAfill.style.background = aPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (aPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
+    if (hpBfill) hpBfill.style.background = bPct > 0.5 ? 'linear-gradient(90deg,#4caf50,#66bb6a)' : (bPct > 0.2 ? 'linear-gradient(90deg,#ffa726,#ffb74d)' : 'linear-gradient(90deg,#f44336,#ef5350)');
   }
 
   function loop(){ draw(); requestAnimationFrame(loop); }
   loop();
 
-  document.getElementById('reset').addEventListener('click', ()=>{ cancelRespawn(); balls = spawnTwo(); for(const b of balls){ b.combo = 0; } damagePopups.length = 0; orb = null; spawnOrb(); updateHPUI(); });
+  const resetBtn = document.getElementById('reset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', ()=>{ 
+      cancelRespawn(); 
+      playerSystem.clearBet(); 
+      balls = spawnTwo(); 
+      for(const b of balls){ b.combo = 0; } 
+      damagePopups.length = 0; 
+      orb = null; 
+      spawnOrb(); 
+      updateHPUI();
+      
+      // Reset betting UI
+      bettingLocked = true;
+      if (bettingUi) bettingUi.classList.add('hidden');
+      if (betResultUi) betResultUi.classList.add('hidden');
+      if (winnerUi) winnerUi.classList.add('hidden');
+      if (betAmountInput) betAmountInput.value = '';
+      
+      updateCoinsDisplay();
+    });
+  }
 });
