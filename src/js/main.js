@@ -332,8 +332,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 // audio files are stored under /public/sound in this project
-const hitAudio = new Audio('/public/sound/hit.mp3');
-const critAudio = new Audio('/public/sound/critHit.mp3');
+const hitAudio = new Audio('/sound/hit.mp3');
+const critAudio = new Audio('/sound/critHit.mp3');
 hitAudio.preload = 'auto';
 critAudio.preload = 'auto';
 hitAudio.volume = 0.46;
