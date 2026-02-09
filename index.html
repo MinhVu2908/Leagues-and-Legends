@@ -3,81 +3,765 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple Bouncing Balls</title>
-  <link rel="stylesheet" href="./src/css/styles.css">
+  <title>Leagues & Legends - Ball Arena</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #050505;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Main app wrapper */
+    #app {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      grid-template-rows: auto 1fr auto auto;
+      gap: 16px;
+      padding: 16px;
+      min-height: 100vh;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Card styling */
+    .card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== LEFT COLUMN ===== */
+    .left-column {
+      grid-column: 1;
+      grid-row: 1 / 4;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .profile-card {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .profile-card h3 {
+      font-size: 13px;
+      color: #90caf9;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .profile-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .profile-avatar-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #6c5ce7;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 200ms ease;
+      flex-shrink: 0;
+    }
+
+    .profile-avatar-btn:hover {
+      background: #5f3dc4;
+      transform: scale(1.1);
+    }
+
+    .profile-stats {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .profile-stat-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .profile-stat-label {
+      color: #aaa;
+    }
+
+    .profile-stat-value {
+      color: #ffd54f;
+      font-weight: bold;
+    }
+
+    .history-card {
+      flex: 1;
+      min-height: 300px;
+    }
+
+    .history-card h3 {
+      font-size: 13px;
+      color: #90caf9;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .history-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .history-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      border-left: 3px solid transparent;
+    }
+
+    .history-entry.win {
+      background: rgba(76, 175, 80, 0.15);
+      border-left-color: #4caf50;
+      color: #b9f6ca;
+    }
+
+    .history-entry.loss {
+      background: rgba(244, 67, 54, 0.15);
+      border-left-color: #f44336;
+      color: #ffcdd2;
+    }
+
+    .history-entry.draw {
+      background: rgba(156, 39, 176, 0.15);
+      border-left-color: #9c27b0;
+      color: #ce93d8;
+    }
+
+    .history-entry-amount {
+      font-weight: bold;
+    }
+
+    /* Custom scrollbar */
+    .history-entries::-webkit-scrollbar,
+    .chat-messages::-webkit-scrollbar,
+    .footer::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .history-entries::-webkit-scrollbar-track,
+    .chat-messages::-webkit-scrollbar-track,
+    .footer::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .history-entries::-webkit-scrollbar-thumb,
+    .chat-messages::-webkit-scrollbar-thumb,
+    .footer::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 3px;
+    }
+
+    .history-entries::-webkit-scrollbar-thumb:hover,
+    .chat-messages::-webkit-scrollbar-thumb:hover,
+    .footer::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    /* ===== CENTER COLUMN ===== */
+    .center-column {
+      grid-column: 2;
+      grid-row: 1 / 4;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header-card {
+      text-align: center;
+      padding: 12px 15px;
+    }
+
+    .header-card h2 {
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .countdown-text {
+      font-size: 13px;
+      color: #90caf9;
+    }
+
+    .combo-text {
+      color: #ffeb3b;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 4px;
+      min-height: 18px;
+    }
+
+    .fight-box {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Canvas styling: target the actual canvas id used in markup (#c) */
+    #c {
+      display: block;
+      background: #222;
+      border: 4px solid #000;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      transition: all 200ms ease;
+    }
+
+    .btn-primary {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-secondary {
+      background: #2196F3;
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: #0b7dda;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .join-server-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: all 200ms ease;
+      text-decoration: none;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .join-server-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(88, 101, 242, 0.4);
+    }
+
+    /* ===== RIGHT COLUMN ===== */
+    .right-column {
+      grid-column: 3;
+      grid-row: 1 / 4;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-card {
+      flex: 1;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      grid-column: 1 / -1;
+      grid-row: 4;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .patch-entry {
+      border-bottom: 1px solid #333;
+      padding-bottom: 8px;
+    }
+
+    .patch-entry:last-child {
+      border-bottom: none;
+    }
+
+    .patch-date {
+      font-weight: 700;
+      color: #4caf50;
+      margin-bottom: 4px;
+      font-size: 10px;
+    }
+
+    .patch-section {
+      margin-bottom: 3px;
+    }
+
+    .patch-title {
+      font-weight: 600;
+      color: #90caf9;
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .patch-body {
+      color: #ccc;
+      font-size: 10px;
+      line-height: 1.3;
+      padding-left: 6px;
+    
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #333;
+    }
+
+    .bet-input-section label {
+      font-size: 11px;
+      color: #ffd54f;
+      font-weight: bold;
+    }
+
+    .bet-amount-input {
+      padding: 6px 8px;
+      border: 1px solid #ffd54f;
+      border-radius: 4px;
+      background: #050505;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .bet-quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .bet-quick-btn {
+      padding: 6px 8px;
+      border: 1px solid #ffd54f;
+      border-radius: 4px;
+      background: #050505;
+      color: #ffd54f;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: bold;
+      transition: all 200ms ease;
+    }
+
+    .bet-quick-btn:hover {
+      background: #ffd54f;
+      color: #050505;
+    }
+
+    .bet-submit-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .bet-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 11px;
+      transition: all 200ms ease;
+      color: #fff;
+    }
+
+    .bet-btn.team-a {
+      background: linear-gradient(135deg, #4fc3f7, #0288d1);
+    }
+
+    .bet-btn.team-a:hover {
+      background: linear-gradient(135deg, #29b6f6, #0277bd);
+      transform: translateY(-2px);
+    }
+
+    .bet-btn.team-b {
+      background: linear-gradient(135deg, #f06292, #c2185b);
+    }
+
+    .bet-btn.team-b:hover {
+      background: linear-gradient(135deg, #ec407a, #ad1457);
+      transform: translateY(-2px);
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      grid-column: 1 / -1;
+      grid-row: 4;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: #222;
+      border: 2px solid #6c5ce7;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-content h2 {
+      color: #6c5ce7;
+      margin-bottom: 16px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    /* ===== MOBILE RESPONSIVE ===== */
+    @media (max-width: 800px) {
+      #app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+
+      .left-column,
+      .center-column,
+      .right-column {
+        grid-column: 1;
+      }
+
+      /* Mobile reorder */
+      .profile-card {
+        order: 1;
+      }
+
+      .header-card {
+        order: 2;
+      }
+
+      .fight-box {
+        order: 3;
+      }
+
+      .bet-card {
+        order: 4;
+      }
+
+      .history-card {
+        order: 5;
+      }
+
+      .join-server-btn {
+        order: 6;
+      }
+
+      .footer {
+        order: 7;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .left-column,
+      .center-column,
+      .right-column {
+        width: 100%;
+      }
+
+      .history-card {
+        min-height: 200px;
+      }
+
+      #canvas {
+        max-width: 100%;
+        aspect-ratio: 1 / 1;
+      }
+
+      .footer {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+    }
+
+    @media (max-width: 520px) {
+      #app {
+        padding: 8px;
+        gap: 8px;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .join-server-btn {
+        padding: 12px;
+        font-size: 13px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div id="container">
-    <div id="hp-container">
-      <div class="hp-wrapper" id="hpA">
-        <div class="hp-label">Ball A</div>
-        <div class="hp-bar"><div class="hp-fill" id="hpA-fill" style="width:100%"></div></div>
-        <div class="hp-text" id="hpA-text">100 / 100</div>
-        <div class="combo-text" id="comboA-text"></div>
-      </div>
-      <div id="countdown" class="countdown"></div>
-      <div class="hp-wrapper" id="hpB">
-        <div class="hp-label">Ball B</div>
-        <div class="hp-bar"><div class="hp-fill" id="hpB-fill" style="width:100%"></div></div>
-        <div class="hp-text" id="hpB-text">100 / 100</div>
-        <div class="combo-text" id="comboB-text"></div>
-      </div>
-    </div>
-    <div class="game-wrapper">
-      <div class="game-area">
-        <canvas id="c" width="500" height="500"></canvas>
-        <div class="button-group">
-          <button id="reset">Reset Scene</button>
-          <a href="./ballShowcase.html" class="showcase-link">BallDex</a>
+  <div id="app">
+    <!-- LEFT COLUMN -->
+    <div class="left-column">
+      <!-- Profile Card -->
+      <div class="card profile-card">
+        <h3>Profile</h3>
+        <div class="profile-content">
+          <button class="profile-avatar-btn" id="profile-btn" title="View Profile">👤</button>
+          <div class="profile-stats">
+            <div class="profile-stat-item">
+              <span class="profile-stat-label">Player:</span>
+              <span id="profile-name-mini">Test User</span>
+            </div>
+            <div class="profile-stat-item">
+              <span class="profile-stat-label">Coins:</span>
+              <span class="profile-stat-value" id="coins-amount-mini">1000</span>
+            </div>
+          </div>
         </div>
       </div>
-      <!-- Dev log sidebar (read-only for clients) -->
-      <aside class="dev-log">
-        <h2>Patch Log</h2>
-        <div id="devLogDisplay" class="dev-log-display" aria-live="polite"></div>
-      </aside>
+
+      <!-- History Card -->
+      <div class="card history-card">
+        <h3>Bet History</h3>
+        <div class="history-entries" id="history-entries"></div>
+      </div>
     </div>
-    <!-- Social links corner (visible but subtle) -->
-    <a href="https://discord.gg/k33yZWs4" class="discord-banner" target="_blank" rel="noopener">
-      <span class="discord-text">JOIN OUR DISCORD SERVER</span>
-    </a>
-    <div class="social-box" aria-hidden="false">
-      <a href="https://discord.gg/k33yZWs4" class="social-link" target="_blank" rel="noopener" title="Discord" aria-label="Discord">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20.317 4.369a19.791 19.791 0 00-4.885-1.515.07.07 0 00-.075.035c-.211.375-.444.864-.608 1.249-1.84-.276-3.68-.276-5.486 0-.164-.386-.405-.874-.617-1.249a.076.076 0 00-.075-.035 19.736 19.736 0 00-4.886 1.515.069.069 0 00-.032.027C2.87 9.04 3.545 13.556 5.19 17.03c.046.08.158.128.27.1 1.312-.47 2.587-.986 3.788-1.657a.046.046 0 01.05.007c.327.25.648.516.958.792.316.283.62.577.902.879a.07.07 0 00.09.01c3.08-1.395 4.6-2.24 5.27-2.494.11-.04.172-.155.13-.26-1.01-2.02-1.6-4.13-1.756-6.202a.061.061 0 00-.03-.05zM8.02 14.233c-1.09 0-1.98-.986-1.98-2.2 0-1.213.88-2.2 1.98-2.2 1.11 0 1.99.997 1.98 2.2 0 1.214-.88 2.2-1.98 2.2zm7.97 0c-1.09 0-1.98-.986-1.98-2.2 0-1.213.88-2.2 1.98-2.2 1.11 0 1.99.997 1.98 2.2 0 1.214-.87 2.2-1.98 2.2z"/></svg>
+
+    <!-- CENTER COLUMN -->
+    <div class="center-column">
+      <!-- Header Card -->
+      <div class="card header-card">
+        <h2>Ball Arena</h2>
+        <div class="countdown-text" id="countdown">Awaiting next match...</div>
+      </div>
+
+      <!-- HP Bars (above fight box) -->
+      <div class="card" style="padding: 8px; gap: 4px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="flex: 1;">
+            <div style="font-size: 12px; color: #ddd; margin-bottom: 4px;">Ball A</div>
+            <div style="height: 14px; background: #333; border: 1px solid #000; border-radius: 6px; overflow: hidden;">
+              <div id="hpA-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #4caf50, #66bb6a); transition: width 200ms ease;"></div>
+            </div>
+            <div style="font-size: 11px; color: #bbb; margin-top: 4px;" id="hpA-text">100/100</div>
+            <div class="combo-text" id="comboA-text"></div>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 12px; color: #ddd; margin-bottom: 4px;">Ball B</div>
+            <div style="height: 14px; background: #333; border: 1px solid #000; border-radius: 6px; overflow: hidden;">
+              <div id="hpB-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #4caf50, #66bb6a); transition: width 200ms ease;"></div>
+            </div>
+            <div style="font-size: 11px; color: #bbb; margin-top: 4px;" id="hpB-text">100/100</div>
+            <div class="combo-text" id="comboB-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fight Box -->
+      <div class="fight-box">
+        <canvas id="c" width="500" height="500"></canvas>
+      </div>
+
+      <!-- Button Group -->
+      <div class="button-group">
+        <button class="btn btn-primary" id="reset">Reset</button>
+        <a href="./ballShowcase.html" class="btn btn-secondary">BallDex</a>
+      </div>
+
+      <!-- Join Server Button -->
+      <a href="https://discord.gg/k33yZWs4" class="join-server-btn" target="_blank" rel="noopener">
+        <span>💬</span>
+        <span>JOIN OUR DISCORD SERVER</span>
       </a>
-      <a href="#" class="social-link" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 6.2A4.8 4.8 0 006.2 13 4.8 4.8 0 0012 17.8 4.8 4.8 0 0017.8 13 4.8 4.8 0 0012 8.2zm6.5-3.7a1.1 1.1 0 11-1.1-1.1 1.1 1.1 0 011.1 1.1z"/></svg>
-      </a>
-      <a href="#" class="social-link" target="_blank" rel="noopener" title="Twitter" aria-label="Twitter">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 5.92c-.63.28-1.3.47-2 .56.72-.43 1.27-1.12 1.53-1.94-.68.4-1.43.69-2.23.85A3.87 3.87 0 0016.5 4c-2.14 0-3.88 1.76-3.88 3.93 0 .31.03.61.1.9C9.7 8.73 7.1 7.3 5.22 5.08c-.34.58-.53 1.26-.53 1.98 0 1.37.69 2.57 1.74 3.27-.64 0-1.24-.2-1.77-.5v.05c0 1.9 1.36 3.49 3.17 3.85-.33.09-.67.14-1.02.14-.25 0-.5-.02-.74-.07.5 1.6 2 2.77 3.77 2.8A7.78 7.78 0 012 19.54a11 11 0 005.95 1.75c7.13 0 11.03-6.12 11.03-11.44v-.52A7.9 7.9 0 0022 5.92z"/></svg>
-      </a>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-column">
+      <!-- Chat Section (Top) -->
+      <div class="card" style="flex: 2; display: flex; flex-direction: column; min-height: 350px;">
+        <h3 style="color: #90caf9; margin-bottom: 10px;">Chat</h3>
+        <div id="chat-messages" class="chat-messages" style="flex: 1; overflow-y: auto; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 12px; color: #aaa;">
+          <div style="text-align: center; padding: 16px; color: #666;">Awaiting match...</div>
+        </div>
+        <input type="text" id="chat-input" placeholder="Say something..." style="padding: 8px; border: 1px solid #333; border-radius: 4px; background: #050505; color: #fff; font-size: 11px;" />
+      </div>
+
+      <!-- Bet Section (Bottom) -->
+      <div class="card bet-card" style="flex: 1; display: flex; flex-direction: column;" id="betting-ui">
+        <h3 style="color: #ffd54f; margin-bottom: 8px;">Place Bet</h3>
+        <div class="bet-input-section" style="flex: 1; overflow-y: auto;">
+          <label for="bet-amount-input">Amount:</label>
+          <input type="number" id="bet-amount-input" class="bet-amount-input" min="1" placeholder="Enter amount" />
+          <div class="bet-quick-buttons">
+            <button class="bet-quick-btn" data-amount="50">50</button>
+            <button class="bet-quick-btn" data-amount="100">100</button>
+            <button class="bet-quick-btn" data-amount="500">500</button>
+          </div>
+          <div class="bet-submit-buttons">
+            <button class="bet-btn team-a" id="bet-on-a">Bet A</button>
+            <button class="bet-btn team-b" id="bet-on-b">Bet B</button>
+          </div>
+          <div id="bet-result-ui" style="margin-top: 8px; padding: 8px; border-radius: 4px; text-align: center; display: none;" class="hidden">
+            <div id="bet-result-message" style="font-size: 11px; color: #fff;"></div>
+            <div id="bet-result-coins" style="font-size: 12px; font-weight: bold; margin-top: 4px;"></div>
+          </div>
+          <div id="winner-ui" style="margin-top: 8px; padding: 8px; border-radius: 4px; background: rgba(76, 175, 80, 0.15); border: 1px solid #4caf50; text-align: center; display: none;" class="hidden">
+            <div id="winner-text" style="font-size: 12px; color: #4caf50; font-weight: bold;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER - Patch Log -->
+    <div class="footer card" style="grid-column: 1 / -1; max-height: 250px; overflow-y: auto;">
+      <h3 style="color: #4caf50; margin-bottom: 10px;">Patch Log</h3>
+      <div id="patch-log"></div>
+    </div>
+  </div>
+
+  <!-- Bet Confirmation Modal -->
+  <div id="bet-confirmation-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 300px;">
+      <h2 style="color: #ffd54f; margin-bottom: 16px; text-align: center;">Confirm Bet</h2>
+      <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 14px; color: #aaa; margin-bottom: 8px;">Betting</div>
+        <div id="confirmation-amount" style="font-size: 28px; color: #ffd54f; font-weight: bold;">100</div>
+        <div style="font-size: 12px; color: #aaa; margin-top: 8px;">coins on <span id="confirmation-team" style="color: #4fc3f7; font-weight: bold;">Ball A</span></div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button id="confirm-bet-btn" style="flex: 1; padding: 10px; background: #4caf50; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirm</button>
+        <button id="cancel-bet-btn" style="flex: 1; padding: 10px; background: #666; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="profile-modal-close" id="profile-modal-close">&times;</button>
+      <h2>Player Profile</h2>
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(108, 92, 231, 0.1); border-radius: 8px; border-left: 3px solid #6c5ce7;">
+          <span style="color: #aaa; font-weight: 600; font-size: 14px;">Name:</span>
+          <span id="profile-name" style="color: #fff; font-size: 16px; font-weight: bold;">Test User</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(108, 92, 231, 0.1); border-radius: 8px; border-left: 3px solid #6c5ce7;">
+          <span style="color: #aaa; font-weight: 600; font-size: 14px;">Coins:</span>
+          <span id="profile-coins" style="color: #ffd54f; font-size: 16px; font-weight: bold;">1000</span>
+        </div>
+      </div>
     </div>
   </div>
 
   <script type="module" src="./src/js/main.js"></script>
 
-  <!-- Dev log display (read-only) -->
+  <!-- Auto-populate patch log -->
   <script>
-    (function(){
-      const display = document.getElementById('devLogDisplay');
+    (function() {
+      const patchLog = document.getElementById('patch-log');
       const entries = [
         { date: '2026-02-06 v0.3', nerf: 'Spiker Ball spike spawn rate reduced', buff: 'Ice Ball slow duration extended', features: 'Added ball showcase with descriptions', new: 'Luxi Ball (laser spawner), Sami Ball (stacking burst)' },
         { date: '2026-02-05 v0.2', nerf: 'Rage Ball rage duration decreased', buff: 'Miya Ball special attack damage +15%', features: 'Dev log system added', new: 'Miya Ball (combo attacker)' },
         { date: '2026-02-04 v0.1', nerf: '', buff: '', features: 'Initial game release', new: 'All base ball types' }
       ];
-      display.innerHTML = '';
       entries.forEach(entry => {
-        const el = document.createElement('div'); el.className = 'dev-entry';
-        if(entry.date){ const h = document.createElement('div'); h.className = 'e-head'; h.textContent = entry.date; el.appendChild(h); }
-        ['nerf','buff','features','new'].forEach(k => {
-          if(entry[k]){
-            const sec = document.createElement('div'); sec.className = 'e-section';
-            const title = document.createElement('div'); title.className='e-title'; title.textContent = k.charAt(0).toUpperCase()+k.slice(1)+':';
-            const body = document.createElement('div'); body.className='e-body'; body.textContent = '• '+entry[k];
-            sec.appendChild(title); sec.appendChild(body); el.appendChild(sec);
+        const entryEl = document.createElement('div');
+        entryEl.className = 'patch-entry';
+        
+        let html = `<div class="patch-date">${entry.date}</div>`;
+        ['nerf', 'buff', 'features', 'new'].forEach(k => {
+          if (entry[k]) {
+            const label = k.charAt(0).toUpperCase() + k.slice(1);
+            html += `<div class="patch-section"><div class="patch-title">${label}:</div><div class="patch-body">• ${entry[k]}</div></div>`;
           }
         });
-        display.appendChild(el);
+        entryEl.innerHTML = html;
+        patchLog.appendChild(entryEl);
       });
     })();
   </script>
